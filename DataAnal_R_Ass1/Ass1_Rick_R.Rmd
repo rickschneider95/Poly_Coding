@@ -9,7 +9,7 @@ Please, submit your work in shape of a zipped folder containing an RStudio proje
 
 Deadline : 4th november, 11:00 PM 
 
-The name of the project should be “dplyr_firstname_lastname”.
+The name of the project should be âdplyr_firstname_lastnameâ.
 
 The project must contain a .Rmd file and the corresponding rendered .html file. Packages should be loaded at the top of the .Rmd file. 
 
@@ -151,9 +151,9 @@ We also gathered data from [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/f
         + _beware of the original formatting_
     - Copy it into "faits_2010_modif" in order to make some modifications:
         + Delete Excel calculations:
-            + `Tout_département`, `Tout_index`
+            + `Tout_dÃ©partement`, `Tout_index`
         + Transform in long format using `gather`
-            + 4 columns : Index, Libellé, dpt, nombre
+            + 4 columns : Index, LibellÃ©, dpt, nombre
         + save the dataframe into a csv file "faits_2010_modif.csv"
 
 ```{r}
@@ -169,14 +169,14 @@ faits_2010=faits_2010[-(1:3), ,drop=FALSE]
 
 #Now we need to delete the column containing the excel computation "Tout_Departement"
 faits_2010 <- faits_2010 %>% 
-                select(-"Tout département")
+                select(-"Tout d�partement")
 
 #gather
 faits_2010 <- gather(faits_2010,"dpt","nombre",3:98)
 
-#delete column "Service à comp?tence national"
+#delete column "Service Ã  comp?tence national"
 faits_2010 <- faits_2010 %>% 
-                select(-"Service à compétence national")
+                select(-"Service � comp�tence national")
 
 write.csv(faits_2010, file = "data/faits_2010_modif2.csv")
 
@@ -205,7 +205,7 @@ Some assumptions to do the exercise:
 - every child born in a department stays into that department until the end of college
 - every children between 11 and 14 years old is in a college
 - the number of college is constant between 2010 and 2016
-- College "à ouvrir" (i.e. "to be open") do not have children. Others have.
+- College "Ã  ouvrir" (i.e. "to be open") do not have children. Others have.
 
 ### Filter datasets to Metropolitan France
 
@@ -265,7 +265,7 @@ dim(prenoms_c) #3497458
 dim(prenoms)   #3712763
 
 
-levels(as.factor(prenoms_c$dpt))
+#levels(as.factor(prenoms_c$dpt))
 
 
 #####  dpp_modif  #####
@@ -296,7 +296,7 @@ faits_2010_modif_c <- rbind(faits_2010_modif_c,col_AB)
 
 
 ####  dpt_data_modif_c  ####
-
+#For now, we are not going to change 2A and 2B into 20, as this file contains information about 2A and 2B that we cannot summarizre in one row without more information available. In a later step, if we need to do computations with the surface, we can simply add up the surface of 2A and 2B.
 
 
 
@@ -313,7 +313,7 @@ faits_2010_modif_c <- rbind(faits_2010_modif_c,col_AB)
 ### ASSUMPTIONS: ###
 # every children between 11 and 14 years old is in a college
 # the number of college is constant between 2010 and 2016
-# College "à ouvrir" (i.e. "to be open") do not have children. Others have.
+# College "Ã  ouvrir" (i.e. "to be open") do not have children. Others have.
 
 
 #number of children between 11 and 14 years (born in 1996-1999 inclusive(assumption))
@@ -326,9 +326,9 @@ n_college_2010 <- dpp_modif_c %>%
                     summarise(n())
 
 average=n_child_11_14/n_college_2010
-n_child_11_14
-n_college_2010
-round(average)
+#n_child_11_14
+#n_college_2010
+average
 
 ```
 
@@ -337,7 +337,7 @@ round(average)
 - Arrange departments according to the calculated average in descending order
 
 ```{r}
-
+#number of children between 11 and 14 years (born in 1996-1999 inclusive(assumption)) per department
 n_child_11_14_dp <- prenoms_c %>% 
                     filter(year %in% 1996:1999) %>%
                     group_by(dpt) %>% 
@@ -346,16 +346,15 @@ n_child_11_14_dp <- prenoms_c %>%
 
 dim(n_child_11_14_dp) #95 rows -> dpt =1 to dpt= 95
 
+#number of colleges in 2010 per departments
 n_college_2010_dp <- dpp_modif_c %>% 
-                        filter(nature_uai_libe == "Coll�ge") %>% ###A ourvir???????
+                        filter(nature_uai %in% c(352,350,340)) %>% ###A ourvir???????
                         group_by(dpt) %>% 
                         arrange(dpt) %>% 
                         summarise(count_coll=n()) 
 
-
-
-dim(n_college_2010_dp) #96 rows -->one row contains NA
-n_college_2010_dp <- n_college_2010_dp %>% drop_na()
+dim(n_college_2010_dp) #96 rows -->one row contains NA, i.e. 9840422L has null entries!
+n_college_2010_dp <- n_college_2010_dp %>% drop_na() #remove the NAs
 dim(n_college_2010_dp) #95 rows as well now
 
 
@@ -365,7 +364,7 @@ average_dpt$sum_child <- n_child_11_14_dp$sum_child/n_college_2010_dp$count_coll
 average_dpt <- average_dpt %>% 
                   arrange(desc(sum_child)) %>% 
                   rename(avg_child_per_dpt = sum_child)
-
+#average_dpt
 
 ```
 
@@ -377,7 +376,7 @@ n_facts_per_dpt <- faits_2010_modif_c %>%
                       group_by(dpt) %>% 
                       summarise(sum_facts=sum(nombre))
 
-#delete he last row (service � comp�tence nationale)
+#delete he last row (service à compétence nationale)
 n_facts_per_dpt <- n_facts_per_dpt[-96,]
 
 
@@ -412,7 +411,7 @@ View(table_dpt_2010)
 
 ```
 
-### Number of children born, number of colleges and facts related by the police services per km² in 2010 by department?
+### Number of children born, number of colleges and facts related by the police services per kmÂ² in 2010 by department?
 
 ```{r}
 
@@ -459,7 +458,7 @@ View(km2_dpt)
 
 ```
 
-### Is there a correlation between the number of birth and the number of facts related by the police per km² in 2010 ?
+### Is there a correlation between the number of birth and the number of facts related by the police per kmÂ² in 2010 ?
 
 ```{r}
 
@@ -469,7 +468,7 @@ cor(km2_dpt$child_2010_per_km2,km2_dpt$facts_2010_per_km2)
 
 ```
 
-### What is the mean regional density (in number/km²) of the 15 most given first names in France ?
+### What is the mean regional density (in number/kmÂ²) of the 15 most given first names in France ?
 
 - Filter the 15 most given first names in France
 - Create a wide table with the department as observations and the 15 most given names in columns (as variables): the count is at the row-column intersection 
@@ -499,7 +498,7 @@ View(dpt_data_modif_c)
 
 ```
 
-#### Bonus question : map the mean regional density (in number/km²) of the 15 most given first names in France 
+#### Bonus question : map the mean regional density (in number/kmÂ²) of the 15 most given first names in France 
 
 - Use the "department" shapefile to cross information and map data
 
