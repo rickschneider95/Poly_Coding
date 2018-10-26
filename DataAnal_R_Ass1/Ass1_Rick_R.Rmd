@@ -188,13 +188,13 @@ View(faits_2010)
 2. Read preprocessed file "faits_2010_modif.csv"
 
 ```{r}
-faits_2010_modif=read_csv("data/faits_2010_modif.csv")
+#faits_2010_modif=read_csv("data/faits_2010_modif.csv")
 
-faits_2010_modif2=read_csv("data/faits_2010_modif2.csv", locale = locale(encoding = "latin1"))
+faits_2010_modif=read_csv("data/faits_2010_modif2.csv", locale = locale(encoding = "latin1"))
 
-View(faits_2010_modif)
+#View(faits_2010_modif)
 
-View(faits_2010_modif2)
+#View(faits_2010_modif2)
 ```
 
 
@@ -371,12 +371,12 @@ average_dpt <- average_dpt %>%
 ### Number of Facts observed by the police services in 2010 per department ? 
 
 ```{r}
-
+#group by departments and sum the # of facts:
 n_facts_per_dpt <- faits_2010_modif_c %>% 
                       group_by(dpt) %>% 
                       summarise(sum_facts=sum(nombre))
 
-#delete he last row (service à compétence nationale)
+#delete he last row (service à compétence nationale), which is not a dpt per definition
 n_facts_per_dpt <- n_facts_per_dpt[-96,]
 
 
@@ -390,24 +390,20 @@ n_facts_per_dpt <- n_facts_per_dpt[-96,]
 ```{r}
 # n_facts_per_dpt : facts related by the police services per department in 2010
 # n_college_2010_dp : number of colleges in 2010 per dpt
+
 # n_child_2010_dp: number of children born per dpt in 2010
-
-
 n_child_2010_dp <- prenoms_c %>% 
                     filter(year == 2010) %>%
                     group_by(dpt) %>% 
                     arrange(dpt) %>% 
                     summarise(sum_child=sum(n))
+
 #join the tables:
 table_dpt_2010 <- inner_join(n_child_2010_dp, n_college_2010_dp, by = "dpt")
 table_dpt_2010 <- inner_join(table_dpt_2010,n_facts_per_dpt, by = "dpt")
 
 #arrang in descending order:
 table_dpt_2010 <- table_dpt_2010 %>% arrange(desc(sum_child),desc(count_coll),desc(sum_facts))
-
-sum(is.na(table_dpt_2010)) ########### 1NA, check out why!!!!!!  --> value is 18529, why is it missing?
-View(table_dpt_2010)
-
 
 ```
 
@@ -462,10 +458,8 @@ View(km2_dpt)
 
 ```{r}
 
-
-#####replace missing value !!!!!!
 cor(km2_dpt$child_2010_per_km2,km2_dpt$facts_2010_per_km2)
-
+#strong correlation! cor=0.9909782. The higher the number of births in one year, the higher the facts related by the police per km2 in 2010. Linear relationship!
 ```
 
 ### What is the mean regional density (in number/kmÂ²) of the 15 most given first names in France ?
@@ -483,12 +477,20 @@ View(faits_2010_modif_c)
 View(dpt_data_modif_c) 
 
 
+#Assumption: we only work with data in Metropolitan France, which means for "dpt" between `01` and `95` included
 
 
+#filter the 15 most given first names
+names_top15 <- prenoms_c %>% 
+                  group_by(name) %>% 
+                  summarise(popularity=sum(n)) %>% 
+                  arrange(desc(popularity)) %>% 
+                  top_n(15) 
+wide_table <- prenoms_c %>% 
+                  filter(name %in% names_top15$name) %>% 
+                  View()
 
-
-
-
+names_top15$name
 
 
 
@@ -503,24 +505,6 @@ View(dpt_data_modif_c)
 - Use the "department" shapefile to cross information and map data
 
 ```{r}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
