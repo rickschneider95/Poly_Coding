@@ -14,13 +14,44 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r cars}
+
+```
+
+```{r}
 #1. Load the data
 data(stackloss)
 names(stackloss)
 #a)plot
 plot(stackloss)
-```
 
+#b) multiple regression:
+fit <- lm(stack.loss ~ ., data=stackloss)
+summary(fit)
+plot(fit)
+names(stackloss)
+
+#c) conf.int for coefficients:
+confint(fit, c("Air.Flow","Water.Temp","Acid.Conc."), level = 0.90)
+
+#d) prediciton interval:
+
+m = data.frame(Air.Flow=58,Water.Temp=20,Acid.Conc.=86)
+predict(fit,m, interval="predict",level=0.99)
+
+#e) test H0:beta3 = 0
+summary(fit)
+#0.10 < 0.34405 --> we accept H0. Statistically speaking, we accept the null hypothesis that Acid.Conc. is 0
+
+```
+```{r}
+#Q3:
+#a)
+X1 = c(4,3,10,7)
+X2 = c(5,4,9,10)
+Y = c(25,20,57,51)
+d <- data.frame(cbind(c3,c1,c2))
+
+```
 
 
 
