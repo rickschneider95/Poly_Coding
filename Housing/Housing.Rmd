@@ -1,6 +1,8 @@
 ---
 title: "Housing"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -8,7 +10,151 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 Include libraries:
+```{r,message=FALSE,warning =FALSE}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+```
+#Links and ideas:
+VERY HELPFUL LINK:
+https://rstudio-pubs-static.s3.amazonaws.com/150743_fbe2be64165349798440e35351653b16.html
+
+https://www.datacamp.com/community/tutorials/linear-regression-R#coefficients
+1) look at p-value --> H0:b=0, H1:b!=0. accept H0 if p>a (i.e.) for large p. We want a small p!, b should be different from 0! In simple terms, a p-value indicates whether or not you can reject or accept a hypothesis. The hypothesis, in this case, is that the predictor is not meaningful for your model.
+2) look at R2 --> the better the closer to 1. R2=(explained variation of the model)/(Total variation of the model). R2 = 0.99 --> explains 99% of the variability.
+In the blue rectangle, notice that there’s two different R², one multiple and one adjusted. The multiple is the R² that you saw previously. One problem with this R² is that it cannot decrease as you add more independent variables to your model, it will continue increasing as you make the model more complex, even if these variables don’t add anything to your predictions (like the example of the number of siblings). For this reason, the adjusted R² is probably better to look at if you are adding more than one variable to the model, since it only increases if it reduces the overall error of the predictions.
+3) plot the residuals --> plot(lm_model$residuals). Should be random, no pattern! If pattern -> If you have more data, your simple linear model will not be able to generalize well.
+
+
+Multicolinearity:
+http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
+Multicollinearity increases the standard errors of the coefficients. Increased standard errors in turn means that coefficients for some independent variables may be found not to be significantly different from 0. In other words, by overinflating the standard errors, multicollinearity makes some variables statistically insignificant when they should be significant. Without multicollinearity (and thus, with lower standard errors), those coefficients might be significant.
+
+idea:
+1)visualize one linear regression with 1 variable
+2)add them all
+3)analyse and remove, come up with new ones (e.g. muliply # of bedrooms with ...)
+
+#Introduction
+The goal of this thesis is to study and predict housing prices (response variable) based on predictor variables that provide data on the physical characteristics of properties, such as their size, age, location, etc.
+
+
+#Exploratory data analysis:
+Lets have a short look at our data set:
+```{r,message=FALSE}
+#read data in and have a look at it:
+house <- read_csv("data/realestate.csv")
+head(house)
+
+#we only work with "house":
+attach(house)
+
+#delete column "ID":
+house <- house[,-1]
+
+#dim of house:
+dim(house)
+names(house)
+
+#is "Pool" binary or does t count the number of pools?
+house %>% select(Pool) %>% distinct()
+
+#which values does "Quality" take?:
+house %>% select(Quality) %>% distinct()
+
+#which values does "AdjHighway" take?:
+house %>% select(AdjHighway) %>% distinct()
+
+View(house)
+```
+We store our data set "realestat.csv" into a variable called house. The first insight is that the column "ID" is not needed, as it only stores the index of the houses. As a result, we can delete this column. The data set now contains 11 columns and 522 rows. The variables are as follows: "Price" (quantitative; the price of the property in question), "Sqft" (quantitative; size), "Bedroom" (quantitative; number of bedrooms), "Bathroom" (quantitative; number of bathrooms), "Airconditioning" (qualitative; yes: 1, no: 0), "Garage" (quantitative; number of garages (or parking spots)), "Pool" (qualitative; yes: 1, no: 0), "YearBuild" (qualitative; year in which the house was built), "Quality" (qualitative; the build-quality of the house on a scale of 1 to 3), "Lot" (quantitative, the surface of the land), and finally "AdjHighway"(qualitative; 1: next to a highway, 0: not close or next to a highway).
+
+#Response variable "Price"
+First of all, we are quickly going to study the variables themselves. In a next step, we are going to look at existing correlations between the variables. Finally, we need to understand the impact of the different variables on the response variable "Price".
+
+Lets start by analysing the "Price" variable:
 ```{r}
+#summary statistics:
+summary(Price)
+
+#histogram:
+ggplot(data=house, aes(Price)) +
+  geom_histogram(col="white",
+                 bins=35) +
+  labs(title="Histogram for Price")
+
+#is it normal?
+qqnorm(Price)
+
+#boxplot:
+ggplot(data=house, aes(x="", y=Price)) +
+  geom_boxplot()+
+  labs(title="Boxplot for Price")
+
+#Check for impossible values:
+sum(is.na(Price))
+sum(Price[Price < 0])
+  
+```
+Looking at the histogram, the price follows approximately a normal distribution. However, it is right skewed, meaning that it has a long right tail. However, the qq-plot shows that the normal assumptions is very weak. The median price of a house is 229900$, while the mean price is 277894$. This is due to the fact that there are a few outliers, reaching a maximum price of 920000$. The boxplot of the price-variable verifies our assumption with the outliers. The data is indeed right skewed with a lot of ouliers. 
+Furthermore, there are no missing values and no negative values, which shows that the data seem to be complete and not faulty.
+
+"Sqft":
+```{r}
+#summary:
+summary(Sqft)
+#histogram:
+ggplot(data=house, aes(Sqft)) +
+  geom_histogram(col="white",
+                 bins=35) +
+  labs(title="Histogram for Sqft")
 
 ```
+
+"Sqft" is similarly distributed to "Price". The mean size of a house is 2261, the median is 2061. The distribution is right-skewed as well.
+
+
+"Bedroom":
+```{r}
+ggplot(data=house, aes(Bedroom)) +
+  geom_bar()
+table(Bedroom)
+```
+Most of the houses have 3 bedrooms (202 bedrooms), followed by 4 bedrooms (179), then 2 (64).
+
+"Bathroom":
+```{r}
+ggplot(data=house, aes(Bathroom)) +
+  geom_bar()
+table(Bathroom)
+```
+Most houses have 3 bedroom, followed by houses with 2 and 4 bathrooms.
+
+"Airconditioning":
+```{r}
+ac_table<-table(Airconditioning)
+ac_table
+100*ac_table[2]/(ac_table[1]+ac_table[2])
+```
+83.12% (i.e. 434) of the houses have airconditioning.
+
+"Garage":
+```{r}
+ggplot(data=house, aes(Garage)) +
+  geom_bar()
+table(Garage)
+```
+The range of parking spots goes from 0 to 7, with a majority of the houses having 2 parking spots, followed by 3 and 2.
+
+
+"Pool":
+
+
+
+```{r}
+plot(house)
+cor(house)
+#a lot of linear reationships
+```
+
 
