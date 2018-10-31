@@ -69,8 +69,8 @@ View(house)
 ```
 We store our data set "realestat.csv" into a variable called house. The first insight is that the column "ID" is not needed, as it only stores the index of the houses. As a result, we can delete this column. The data set now contains 11 columns and 522 rows. The variables are as follows: "Price" (quantitative; the price of the property in question), "Sqft" (quantitative; size), "Bedroom" (quantitative; number of bedrooms), "Bathroom" (quantitative; number of bathrooms), "Airconditioning" (qualitative; yes: 1, no: 0), "Garage" (quantitative; number of garages (or parking spots)), "Pool" (qualitative; yes: 1, no: 0), "YearBuild" (qualitative; year in which the house was built), "Quality" (qualitative; the build-quality of the house on a scale of 1 to 3), "Lot" (quantitative, the surface of the land), and finally "AdjHighway"(qualitative; 1: next to a highway, 0: not close or next to a highway).
 
-#Response variable "Price"
-First of all, we are quickly going to study the variables themselves. In a next step, we are going to look at existing correlations between the variables. Finally, we need to understand the impact of the different variables on the response variable "Price".
+#EDA
+First, we are going to study the variables themselves and their impact on the price of the house. Next, we are going to generate to simple regression models based on the results of the analysis. Finally, we will look at the relations that might exist amongst te variables in order to remove a few of them from oure model (to improve it by reducing the effects of multicollinearity) and to create new variables that might improve our model.
 
 Lets start by analysing the "Price" variable:
 ```{r}
@@ -109,45 +109,212 @@ ggplot(data=house, aes(Sqft)) +
                  bins=35) +
   labs(title="Histogram for Sqft")
 
+#null values?
+sum(is.na(Sqft))
+
+#scatter plot:
+ggplot(data = house, aes(x=Sqft,y=Price))+
+  geom_point()+
+  labs(title="Scatter plot of the price as a function of the size (Sqft)")
+#correlation:
+cor(Price,Sqft)
 ```
 
-"Sqft" is similarly distributed to "Price". The mean size of a house is 2261, the median is 2061. The distribution is right-skewed as well.
+"Sqft" is similarly distributed to "Price". The mean size of a house is 2261, the median is 2061. The distribution is right-skewed as well. There are no null values and all values are larger than 0.
+Looking at the scatter plot between the "Price" variable and the "Sqft" variable, there seems to be a linear relationship between the 2 variables. The high positive correlation of 0.819 seems to reinforce our initial assumption of a linear relationship between the two variables.
 
 
 "Bedroom":
 ```{r}
+#barplot:
 ggplot(data=house, aes(Bedroom)) +
   geom_bar()
+
+#table of the different values:
 table(Bedroom)
+
+#null values?
+sum(is.na(Bedroom))
+
+#mean for the different values of the categorical variable:
+mean_cat <- house %>% 
+              group_by(Bedroom) %>% 
+              summarise(m=mean(Price))
+#plot the mean values for the diffrent bedrooms:
+ggplot(data=mean_cat, aes(x=Bedroom,y=m)) +
+  geom_point()+
+  labs(title="Plot of the mean values of the price against the number of bedrooms")
+
 ```
-Most of the houses have 3 bedrooms (202 bedrooms), followed by 4 bedrooms (179), then 2 (64).
+Most of the houses have 3 bedrooms (202 bedrooms), followed by 4 bedrooms (179), then 2 (64). There are no missing values and the data lies within {0,...,6}.
+There seems to be an interesting relationship between the number of bedrooms and the price of the house. We plotted the mean values for the price having a certain amount of bedrooms. We can observe a linear trend. More bedrooms seem to increase the price of the property.
+
 
 "Bathroom":
 ```{r}
 ggplot(data=house, aes(Bathroom)) +
-  geom_bar()
+  geom_bar()+
+  labs(title="Barplot of the variable Bathroom")
 table(Bathroom)
+
+#null values?
+sum(is.na(Bathroom))
+
+#mean for the different values of the categorical variable:
+mean_cat <- house %>% 
+              group_by(Bathroom) %>% 
+              summarise(m=mean(Price))
+mean_cat
+#plot the mean values for the diffrent bedrooms:
+ggplot(data=mean_cat, aes(x=Bathroom,y=m)) +
+  geom_point()+
+  labs(title="Plot of the mean values of the price against the number of bathrooms")
+
 ```
-Most houses have 3 bedroom, followed by houses with 2 and 4 bathrooms.
+Most houses have 3 bathrooms, followed by houses with 2 and 4 bathrooms. There are no missing values and the data lies within {0,1,...,7}. As a result, there seems to be no invalid data points.
+Similar to the bedrooms, the number of bathrooms seems to have an influence n the price. More bathrooms means that the property will be sold a higher price (general tendency).
+
 
 "Airconditioning":
 ```{r}
+#table + calculate percentage:
 ac_table<-table(Airconditioning)
 ac_table
 100*ac_table[2]/(ac_table[1]+ac_table[2])
+
+#null values?
+sum(is.na(Airconditioning))
+
+#mean for the two values:
+house %>% 
+  group_by(Airconditioning) %>%
+  summarise(m=mean(Price))
 ```
-83.12% (i.e. 434) of the houses have airconditioning.
+83.12% (i.e. 434) of the houses have airconditioning. There are no missing values. The mean price for houses with airconditioning is higher (i.e. 295801) than for houses without airconditioning (i.e. 189583).
+
 
 "Garage":
 ```{r}
 ggplot(data=house, aes(Garage)) +
   geom_bar()
 table(Garage)
+
+#null values?
+sum(is.na(Garage))
+
+#mean for the different values of the categorical variable:
+mean_cat <- house %>% 
+              group_by(Garage) %>% 
+              summarise(m=mean(Price))
+#plot the mean values for the diffrent bedrooms:
+ggplot(data=mean_cat, aes(x=Garage,y=m)) +
+  geom_point()
 ```
-The range of parking spots goes from 0 to 7, with a majority of the houses having 2 parking spots, followed by 3 and 2.
+The range of parking spots goes from 0 to 7, with a majority of the houses having 2 parking spots, followed by 3 and 2. There are no missing values and the data lies within {0,...,7}.
+There is a slight positive relatinship between the number of garages and the price of a house. However, it is very weak.
 
 
 "Pool":
+```{r}
+#generate a frequency table and calculate percentage:
+pool_table <-table(Pool)
+pool_table
+100*pool_table[2]/(pool_table[1]+pool_table[2])
+
+#null values?
+sum(is.na(Pool))
+
+#Is a house with a pool worth more?
+house %>% 
+    group_by(Pool) %>% 
+    summarise(m=mean(Price))
+
+```
+Almost 7% of the properties have a pool. A house with a pool is worth on average 352120$, wile a house without a pool is worth on average 272396$.
+
+
+
+```{r}
+#barplot
+ggplot(data=house, aes(YearBuild)) +
+  geom_bar()
+summary(YearBuild)
+
+#null values?
+sum(is.na(YearBuild))
+
+#scatterplot between the year and the price:
+ggplot(data=house, aes(x=YearBuild,y=Price))+
+  geom_point()+
+  
+```
+The build-year for the different houses is spread from 1885 to 1998. The mean year is 1967. The number of houses built increases and reaches a spike around 1960.It then decreases again reaching a low in 1975, before rising sharply again and then slowly decreasing again.
+
+"Quality":
+```{r}
+#table for the quality:
+table(Quality)
+
+house %>% 
+  group_by(Quality) %>% 
+  summarise(mean(Price))
+          
+
+#null values?
+sum(is.na(Quality))
+```
+In our data set, 290 houses are built n quality 2, 164 in quality 3 and 68 in quality 1. Following those numbers, it seems that the high quality houses are denoted with 1, medium quality with 2 and low quality/cheap with 3. This seems to be confirmed by the mean of the prices for the different build-qualities. The mean of the prices for build-qulity 1 is 543611$, for build-quality 2 it is 273766, and for built-quality 3, it is 175018. We conclude that the quality has an influence on the housing prices.
+
+
+"Lot":
+```{r}
+#histogram:
+ggplot(data=house, aes(Lot)) +
+  geom_histogram(col="white",
+                 bins=35) +
+  labs(title="Histogram for Lot")
+
+#is it normal?
+qqnorm(Lot)
+
+#boxplot:
+ggplot(data=house, aes(x="", y=Lot)) +
+  geom_boxplot()+
+  labs(title="Boxplot for Lot")
+
+#summary statistics:
+summary(Lot)
+
+#null values?
+sum(is.na(Lot))
+
+#scatter plot with Price
+ggplot(data=house,aes(x=Lot,y=Price))+
+  geom_point() +
+  labs(title="Scatter plot of Lot(x) against Price(y)")
+#are they correlated?
+cor(Price,Lot)
+```
+The median size of the land is 22200, while the mean size is 24370. This is due to the fact that the values in "Lot" are right-skewd. The values last from 4560 to 86830, and there are no null values.
+The scatter plot of "Lot" and "Price" shows a slight positive correlation (which is confirmed by the Pearson's correlation which is 0.224). There is a slight tendency that suggests that houses on larger land surfaces are sold for more money than properties on small lands. However, this correlation is not very strong.
+
+
+AdjHighway:
+```{r}
+#table for the quality:
+table(AdjHighway)
+
+#mean for the different values of the categorical variable:
+house %>% 
+  group_by(AdjHighway) %>% 
+  summarise(mean(Price))
+          
+
+#null values?
+sum(is.na(AdjHighway))
+```
+A large maority of the properties in our data set is not next to a highway. Only 11 out of 522 houses are next to one. Looking at the mean prices of houses next to a highway (2300027$) compared to prices of houses that are not next to a highway (230027$), we can assume that there is a relationship between those to types of properties. However, the number of houses next to the highway is small, so it is difficult to say if the price difference is caused by the fact of being close to the highway.
+
 
 
 
