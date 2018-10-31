@@ -1,6 +1,7 @@
 ---
 title: "Housing"
 output:
+  word_document: default
   pdf_document: default
   html_document: default
 ---
@@ -195,8 +196,11 @@ house %>%
 
 "Garage":
 ```{r}
+#barplot
 ggplot(data=house, aes(Garage)) +
-  geom_bar()
+  geom_bar()+
+  labs(title="Barplot of the variable Garage")
+
 table(Garage)
 
 #null values?
@@ -208,7 +212,9 @@ mean_cat <- house %>%
               summarise(m=mean(Price))
 #plot the mean values for the diffrent bedrooms:
 ggplot(data=mean_cat, aes(x=Garage,y=m)) +
-  geom_point()
+  geom_point()+
+  labs(title="Plot of the mean values of the price against the number of garages")
+
 ```
 The range of parking spots goes from 0 to 7, with a majority of the houses having 2 parking spots, followed by 3 and 2. There are no missing values and the data lies within {0,...,7}.
 There is a slight positive relatinship between the number of garages and the price of a house. However, it is very weak.
@@ -237,7 +243,9 @@ Almost 7% of the properties have a pool. A house with a pool is worth on average
 ```{r}
 #barplot
 ggplot(data=house, aes(YearBuild)) +
-  geom_bar()
+  geom_bar()+
+  labs(title="Barplot of the variable YearBuild")
+
 summary(YearBuild)
 
 #null values?
@@ -246,15 +254,19 @@ sum(is.na(YearBuild))
 #scatterplot between the year and the price:
 ggplot(data=house, aes(x=YearBuild,y=Price))+
   geom_point()+
+  labs(title="Scatter plot of the price against the year in which the house was built")
+
   
 ```
 The build-year for the different houses is spread from 1885 to 1998. The mean year is 1967. The number of houses built increases and reaches a spike around 1960.It then decreases again reaching a low in 1975, before rising sharply again and then slowly decreasing again.
+There seems to be a relationship between the year in which the house was built and its price. A new house has a higher price tag than an old one. However, this relationship is not very strong.
 
 "Quality":
 ```{r}
 #table for the quality:
 table(Quality)
 
+#mean values for different quality houses:
 house %>% 
   group_by(Quality) %>% 
   summarise(mean(Price))
@@ -315,6 +327,30 @@ sum(is.na(AdjHighway))
 ```
 A large maority of the properties in our data set is not next to a highway. Only 11 out of 522 houses are next to one. Looking at the mean prices of houses next to a highway (2300027$) compared to prices of houses that are not next to a highway (230027$), we can assume that there is a relationship between those to types of properties. However, the number of houses next to the highway is small, so it is difficult to say if the price difference is caused by the fact of being close to the highway.
 
+
+
+#First model:
+A first and very simple approach to predict the housing prices is to make use of the strong linear correlation of the size and the price of a property. As such, we can generate a simple linear regression model and plot its result.
+```{r}
+simple_reg <- lm(Price ~ Sqft)
+summary(simple_reg)
+
+ggplot(house, aes(x=Sqft, y=Price)) +
+    geom_point() +   
+    geom_smooth(method=lm)+   # Add linear regression line 
+    labs(title="Scatter plot of the price vs the size of the house (sqft)")                      
+```
+This very simple model predicts the housing prices based on the size of the houses. The p-values for Sqft is very small, so the predictor is meaningful for our model. The R2 value is 0.6715, so our model can account for 67,15% of the variability. All in all, even though the model is very simple, it is not that bad. However, as we have a lot more data, we can generate a far better prediction. 
+We are going to proceed as follows. First, we are going to generate a model including as many variables as possible. Next we are trying to improve the model by removing dependent variables, and by encoding the categorical variables. Finally, we are going to come up with new variables that are derived from the existing data set. The final model will then be analysed in detail from a statistical point of view.
+
+
+
+
+
+
+To consider:
+1) Are the variables in the model independent?
+2) Are they categorical or contiuous variables? --> dummy variables : https://www.moresteam.com/whitepapers/download/dummy-variables.pdf 
 
 
 
