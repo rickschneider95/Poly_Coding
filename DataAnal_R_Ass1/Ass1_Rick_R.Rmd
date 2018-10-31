@@ -1,5 +1,7 @@
 ---
-title: "prenoms_dplyr_clean_data_if-at-all_en"
+title: "My Bechdel test"
+author: "Rick SCHNEIDER"
+date: "1 octobre 2018"
 output: html_document
 ---
 
@@ -36,7 +38,7 @@ knitr::opts_chunk$set(echo = TRUE,eval=TRUE)
 
 ### Load here `{dplyr}`, `{prenoms}` and any other needed package
 
-```{r}
+```{r,message=FALSE}
 
 library(dplyr)
 library(prenoms)
