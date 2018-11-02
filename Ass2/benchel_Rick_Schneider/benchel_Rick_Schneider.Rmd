@@ -1,0 +1,660 @@
+---
+title: "benchdel_Rick_Schneider"
+author: "Rick SCHNEIDER"
+date: "November 1, 2018"
+output: html_document
+---
+
+https://data.world/sharon/bechdel-test -> new data for bechdel test!!!!!!!
+
+Please, submit your work in shape of a zipped folder containing an RStudio project to xhec2018@thinkr.fr
+Deadline : 4th november, 11:00 PM
+The name of the project should be "bechdel_firstname_lastname".
+The project must contain a `.Rmd` file and the corresponding rendered `.html` file. 
+Packages should be loaded at the top of the `.Rmd` file. 
+Exogenous data must be included if you use some (provide the file or provide the instructions to build them)
+The whole thing should be _reproducible_.
+
+
+**update 2018-10-15:** in the scoregrid, "exploration" means "show some of the wandering you made to build a new test". Let say you want to explore "A film fails if lesser than 40% of the cast and lesser than 40% of the crew are women". To do so, you're going to calculate how many films pass the test, and why. Therefore, maybe you're going to look which films are concerned, maybe you're going to test 45% instead of 40%. Maybe proportion is not relevant and has side effect so you're going to adapt your test in something like "A film fails if lesser than 40% (or at least 5 characters if the cast counts lesser than 30 people) of the cast and lesser than 40% of the crew are women". 
+We saw that data visualisation works hand in hand with data description, that's why you should show "at least 2 graphs as a result of these explorations"
+
+
+# Load packages:
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,message=FALSE,warning =FALSE}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(stringr)
+```
+
+
+# Introduction
+
+The goal of this new bechdel test is to measure the gender imbalance in movies.
+
+The original Bechdel test tests for 3 criteria:
+1)Are there at least 2 women in the movie?
+2)Do they have a conversation together?
+3)Is that conversation about something else than a man?
+
+Fivethirtyeight has created a new Bechdel test.
+
+Import data from the new Benchdel test:
+```{r,message=FALSE, warning =FALSE}
+
+cast_gender <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/next-bechdel/nextBechdel_castGender.csv")
+crew_gender <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/next-bechdel/nextBechdel_crewGender.csv")
+
+```
+# Analyis of cast_gender & crew_gender
+
+Lets start by having a look the 2 data sets that we have to create our benchdel test:
+
+cast_gender:
+```{r}
+#View(new_bechdel)
+
+head(cast_gender)
+dim(cast_gender)
+names(cast_gender)
+summary(cast_gender)
+#View(cast_gender)
+
+#How many different movies are in the df?
+cast_gender %>% 
+  distinct(MOVIE) %>% 
+  summarise(count_movies_cast=n())
+```
+cast_gender is a 2075x6 data frame with the variables "MOVIE" (name of the movie), "ACTOR" (name of the casted actor), "CHARACTER_NAME" (name of the character in the movie), "TYPE" (which role did the character play? Was it a leading, supporting,... one?), "BILLING" (billing number) and "GENDER" (female or male).
+The data frame contains information about 50 different movies.
+
+Lets have a look at crew_gender:
+```{r}
+head(crew_gender)
+dim(crew_gender)
+names(crew_gender)
+summary(crew_gender)
+#View(crew_gender)
+
+#How many different movies are in the df?
+crew_gender %>% 
+  distinct(MOVIE) %>% 
+  summarise(count_movies_crew=n())
+```
+crew_gender is a 10029x7 data frame with the variables "MOVIE", "DEPARTMENT" (in which department did the crew member work?), "FULL_NAME", "FIRST_NAME", "IMDB" (link to the IMDb page of the person in question), "GENDER_PROB" (the probability of the name being female (->0) or male (->1)) and "GENDER_GUESS" (the guess of the gender based on the probability).
+crew_gender contains information about 19 different movies. All movie names have the supplement of "(2016)" in their name which can be removed.
+
+
+
+#My first Benchdel criteria:
+The goal of my personal benchdel test is to test for gender inequality. Therefore, I am going to introduce a few gender criteria that a movie should fulfill to pass my test. The first criteria that I would like t take into consideration are the following:
+1) Over 30% of the cast should be female
+2) Leading roles should be 40% female
+
+Next the data set is analysed to see if those criteria are reasonable. In a next step, if necessary, we are going to adapt the criteria
+
+#Analysis of the first Benchdel criteria:
+Lets have a look at the feasibility of our first criterium, which is: "Over 30% of the cast should be female":
+```{r}
+#create  count table:
+count_gender <- table(cast_gender$GENDER)
+count_gender
+
+#create a pie chart to visualize the count:
+pie <- ggplot(cast_gender, aes(x = "", fill = factor(GENDER))) + 
+  geom_bar(width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="GENDER", 
+       x=NULL, 
+       y=NULL, 
+       title="Pie Chart of class", 
+       caption="Source: mpg")
+  
+pie + coord_polar(theta = "y", start=0)
+
+#calculate the percentage ratio:
+count_gender <- data.frame(count_gender)
+perc_female <- count_gender[count_gender$Var1=="Female",2]/(count_gender[count_gender$Var1=="Female",2]+count_gender[count_gender$Var1=="Male",2])
+perc_female*100
+```
+On average over all movies in our database, around 31.74% of the cast is female. As such, our requirement to have at least 30% females in a cast seems to be a feasible requirement without excluding all the movies, while still being a good indicator for gender equality.
+
+
+Lets have a look at the feasibility of our first criterium, which is: "Leading roles should be 40% female":
+
+```{r}
+#filter out leading characters:
+leading_cast <- cast_gender %>%
+                  filter(TYPE == "Leading")
+
+#geberate a frequency count table:
+leading_gender_count = table(leading_cast$GENDER)
+leading_gender_count
+
+
+#generate a pie chart with the gender of leading people:
+pie <- ggplot(leading_cast, aes(x = "", fill = factor(GENDER))) + 
+  geom_bar(width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="GENDER", 
+       x=NULL, 
+       y=NULL, 
+       title="Pie Chart of class", 
+       caption="Source: mpg")
+  
+pie + coord_polar(theta = "y", start=0)
+
+#calculate the percentage ratio:
+leading_gender_count <- data.frame(leading_gender_count)
+perc_female <- leading_gender_count[leading_gender_count$Var1=="Female",2]/(leading_gender_count[leading_gender_count$Var1=="Female",2]+leading_gender_count[leading_gender_count$Var1=="Male",2])
+perc_female*100
+
+```
+
+
+
+
+# My first Benchdel test:
+
+Criterium 1:
+```{r}
+#As we need to count the gender for a few criteria, we create a function to have a reproductible code. In R, functions cannot return multiple values, so we need to create 2 seperate functions:
+#count females function:
+f_count_fem <- function(df){
+  num_fem <- df %>% 
+                  filter(GENDER == "Female") %>% 
+                  group_by(MOVIE) %>% 
+                  summarise(count_fem_cast = n())
+  return(num_fem)}
+
+#count males function:
+f_count_male <- function(df){
+  num_male <- df %>% 
+                  filter(GENDER == "Male") %>% 
+                  group_by(MOVIE) %>% 
+                  summarise(count_male_cast = n()) 
+  return(num_male)}
+
+num_fem <- f_count_fem(cast_gender)
+num_male <- f_count_male(cast_gender)
+
+#Join the count per movie data frames and calculate the ratio:
+my_bechdel <- inner_join(num_fem,num_male,by="MOVIE")
+my_bechdel <- my_bechdel %>% 
+                mutate(crit1_test = count_fem_cast/(count_fem_cast+count_male_cast),
+                       crit1 = case_when(       
+                          crit1_test > 0.3  ~ 1, crit1_test <= 0.3 ~ 0))      
+table(my_bechdel$crit1) 
+#View(my_bechdel)
+
+```
+We see that 31 out of the 50 movies pass this criterium
+
+
+criterium 2:
+
+```{r}
+#use functions to count males and females having a leading role:
+num_fem <- f_count_fem(leading_cast)
+num_male <- f_count_male(leading_cast)
+#View(num_fem)
+
+#Reminder: leading_cast -> information about the leading actors for every movie
+#select a list of distinct movies where we have information about a leading actor
+my_bechdel2 <- leading_cast %>% 
+                  select(MOVIE) %>%  
+                   distinct(MOVIE)
+
+#add the female count column:
+my_bechdel2 <- right_join(num_fem,my_bechdel2,by="MOVIE")
+my_bechdel2[is.na(my_bechdel2[,2]),2]=0
+#add a male count column:
+my_bechdel2 <- right_join(num_male,my_bechdel2,by="MOVIE")
+my_bechdel2[is.na(my_bechdel2[,2]),2]=0
+
+#calculate the ratio:
+my_bechdel2 <-  my_bechdel2 %>% 
+                    mutate(crit2_test = count_fem_cast/(count_male_cast+count_fem_cast))
+#final crit2 (1: passed criterium, 0: not passed)
+my_bechdel2 <-  my_bechdel2 %>%
+                    mutate(crit1_test = count_fem_cast/(count_fem_cast+count_male_cast),
+                       crit2 = case_when(       
+                          crit2_test > 0.4  ~ 1, crit2_test <= 0.4 ~ 0)) 
+table(my_bechdel2$crit2)
+#16 out of 31 movies pass this part of the test (+/- 50%)
+            
+#View(my_bechdel2)
+
+```
+
+Putting the criteria together:
+```{r}
+rick_test <- my_bechdel
+rick_test <- rick_test %>% 
+                left_join(my_bechdel2,by="MOVIE") %>% 
+                select(MOVIE,crit1,crit2)
+
+#if there is no data available, put a -1
+rick_test[is.na(rick_test$crit2),"crit2"]=-10
+
+#how many crit2 are equal to -1?
+rick_test %>% 
+  filter(crit2 == -10) %>% 
+  summarise(count_minus1 = n())
+#View(rick_test)
+```
+#First evaluation:
+
+After implementing the 2 first criteria, we can see that there is a problem for the availability of the data. This means that if we filter for different categories, there might not be data on every movie. For crit2 e.g., there are 19 movies that cannot be tested because of missing data. This can be seen in the following plot: PLOTPLOTPLOT.
+
+We are going to look at the different roles of the of the cast and we are going to check how much data is actually available for the different categories.
+
+```{r}
+#this variable stores the amount of data we have in the type column with respect to different movies
+types_count <- cast_gender %>% 
+                  select(MOVIE,TYPE) %>% 
+                  group_by(TYPE) %>%
+                  distinct(MOVIE) %>% 
+                  summarize(count_movies=n()) 
+
+#barplot of our resulting count table:
+ggplot(types_count, aes(x=TYPE, y=count_movies)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Ordered Bar Chart", 
+       subtitle="Make Vs Avg. Mileage", 
+       caption="source: mpg") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+
+
+```
+We can see that the type "leading" provides data on actors with main roles for 31 movies. Only the type "supporting" provides data on every movie. As a result, we should create a criteria based on the proportion of female people with supporting roles in the movies.
+
+We are going to extend the test as follows:
+1) Over 30% of the cast should be female
+2) Leading roles should be 40% female
+3) The supporting actors should be 50% female
+
+
+We are going to decide in a later step if we are going to reject criterium 2), or if we are going to find a more flexible solution for this problem.
+
+Lets have a look at the feasibility of our third criterium, which is: "The supporting actors should be 50% female":
+```{r}
+supp_gender <- cast_gender %>% 
+                  filter(TYPE == "Supporting")
+
+#create a pie chart to visualize the count:
+pie <- ggplot(supp_gender, aes(x = "", fill = factor(GENDER))) + 
+  geom_bar(width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="GENDER", 
+       x=NULL, 
+       y=NULL, 
+       title="Pie Chart of class", 
+       caption="Source: mpg")
+  
+pie + coord_polar(theta = "y", start=0)
+```
+Looking at this pie chart, we can immediately see that the 50% threshold for women in supporting roles is way too high. It might be a good indicator for gender equality, but it is too strict to be included this way. It will exclude too many movies and thereby make our test too strong (especially because we have more criteria to fulfill). As such, it seems reasonable to lower this threshold to 30%. Here are our revised criteria:
+
+1) Over 30% of the cast should be female
+2) Leading roles should be 40% female
+3) The supporting actors should be 30% female
+
+Criterium 3:
+```{r}
+#use functions to count males and females having a supporting role:
+num_fem <- f_count_fem(supp_gender)
+num_male <- f_count_male(supp_gender)
+#View(num_fem)
+
+#select a list of distinct movies where we have information about a supporting actor
+my_bechdel3 <- supp_gender %>% 
+                  select(MOVIE) %>%  
+                   distinct(MOVIE)
+#View(my_bechdel3)
+#add the female count column:
+my_bechdel3 <- right_join(num_fem,my_bechdel3,by="MOVIE")
+#if NA --> no women as supporting actor. replace by 0:
+my_bechdel3[is.na(my_bechdel3[,2]),2]=0
+#add a male count column:
+my_bechdel3 <- right_join(num_male,my_bechdel3,by="MOVIE")
+#if NA --> no man as supporting actor. replace by 0:
+my_bechdel3[is.na(my_bechdel3[,2]),2]=0
+
+#calculate the ratio:
+my_bechdel3 <-  my_bechdel3 %>% 
+                    mutate(crit3_test = count_fem_cast/(count_male_cast+count_fem_cast))
+#final crit3 (1: passed criterium, 0: not passed, -10 if NA as we do not have enough data)
+my_bechdel3 <-  my_bechdel3 %>%
+                    mutate(crit1_test = count_fem_cast/(count_fem_cast+count_male_cast),
+                       crit3 = case_when(       
+                          crit3_test > 0.4  ~ 1, 
+                          crit3_test <= 0.4 ~ 0,
+                          is.na(crit3_test) == TRUE ~ -10)) 
+table(my_bechdel3$crit3)
+```
+13 movies pass the test, 36 do not pass it and for 1 movie, we do not have data on the gender of the of the supporting cast.
+
+###### MAYBE CHANGE CRITERIUM TO: 30% if enough leading people, otherwise .... #######
+
+Putting the criteria together:
+```{r}
+#join to generate new df with 3 criteria:
+rick_test <- rick_test %>% 
+                left_join(my_bechdel3,by="MOVIE") %>% 
+                select(MOVIE,crit1,crit2,crit3)
+
+
+```
+
+#Consideration of further criteria and solution for incomplete data
+As already pointed above, the data frame crew_gender contains only information on 19 different movies. In addition, our 3 criteria already exclude a few movies due to insufficient data.
+
+We need a solution for this. There are 3 possible scenarios:
+
+a)We do our final test only on the movies where we have all information for our chosen tests
+b)we change our criteria in order to test for all the movies
+c)we come up with a formula that allows to take missing data into account for the total test
+
+While a) is a convenient solution, it strongly limits our test, that can only be applied on a few movies. In b), we are missing out on highly informative criteria. A solution for c) could look as follows: A movie is eligible for the test if there is enough data on 4 out of the 5 criteria (for example),if 5 --> pass 3 tests and be very close to pass the 4th (we need to introduce a closeness measure!); if 4 --> pass 3 tests )
+
+
+A good measure for gender equality is the pay of the actor. This is why, in order to pass the 4th criterium, at least 1 of the 3 highest paid actors should be female. Here are our updated criteria:
+
+1) Over 30% of the cast should be female
+2) Leading roles should be 40% female
+3) The supporting actors should be 30% female
+4) At least 1 of the 5 highest paid actors should be female
+
+
+Criterium 4:
+```{r}
+
+#generate a dataframe with the top 5 payed actors for every movie:
+top_pay <- cast_gender %>% 
+              filter(BILLING %in% c(1,2,3,4,5)) 
+
+#number of females in the top 5 for every movie:
+num_fem <- f_count_fem(top_pay)
+
+#initialize with a list of all the movies:
+my_bechdel4 <- cast_gender %>% 
+                  select(MOVIE) %>% 
+                  distinct()
+
+#add the female count column:
+my_bechdel4 <- right_join(num_fem,my_bechdel4,by="MOVIE")
+my_bechdel4[is.na(my_bechdel4[,2]),2]=0
+
+my_bechdel4 <-  my_bechdel4 %>%
+                    mutate(
+                       crit4 = case_when(       
+                          count_fem_cast > 0  ~ 1, 
+                          count_fem_cast == 0  ~ 0,
+                          )) 
+
+table(my_bechdel4$crit4)
+
+```
+This test seems to be unrestrictive. To find a good alternative, we are going to plot the relation of women to men for the top 5, top 4 and top 3 highest paid actors for every movie
+
+```{r}
+#store top 5 , top 4 and top 3 payed actors respectively:
+top_pay5 <- top_pay
+top_pay4 <- cast_gender %>% 
+              filter(BILLING %in% c(1,2,3,4))
+top_pay3 <- cast_gender %>% 
+              filter(BILLING %in% c(1,2,3))
+
+#generate 3 count plots that count the number of women and men for the 3 datasets respectively:
+g5 <- ggplot(top_pay5,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
+g4 <- ggplot(top_pay4,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
+g3 <- ggplot(top_pay3,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
+
+#top 5 payed actors, plot the count of women, men and unknown:
+g5
+#top 4 payed actors, plot the count of women, men and unknown:
+g4
+#top 3 payed actors, plot the count of women, men and unknown:
+g3
+```
+We can see that the proportion does not change a lot. Even for the top 3 payed actors, we can assume, based on the graphs, that the proportion stays +/- the same. Ths shows that we can change our criterium to: "At least 2 of the 3 highest paid actors should be female".
+
+Criterium 4, revised:
+```{r}
+#generate a dataframe with the top 3 payed actors for every movie:
+top_pay <- cast_gender %>% 
+              filter(BILLING %in% c(1,2,3)) 
+
+#number of females in the top 3 for every movie:
+num_fem <- f_count_fem(top_pay)
+
+#initialize with a list of all the movies:
+my_bechdel4 <- cast_gender %>% 
+                  select(MOVIE) %>% 
+                  distinct()
+
+#add the female count column:
+my_bechdel4 <- right_join(num_fem,my_bechdel4,by="MOVIE")
+my_bechdel4[is.na(my_bechdel4[,2]),2]=0
+
+my_bechdel4 <-  my_bechdel4 %>%
+                    mutate(
+                       crit4 = case_when(       
+                          count_fem_cast > 1  ~ 1, 
+                          count_fem_cast <=1  ~ 0,
+                          )) 
+
+table(my_bechdel4$crit4)
+```
+This stronger criterium is way more valuable for our test, as it shows that movies who pass this criterium do not bias their pay against female actors!
+
+Putting the criteria together:
+```{r}
+#join to generate new df with 3 criteria:
+rick_test <- rick_test %>% 
+                left_join(my_bechdel4,by="MOVIE") %>% 
+                select(MOVIE,crit1,crit2,crit3,crit4)
+
+```
+
+
+Finally, we can introduce a very strong criterium, that allows a movie to pass the test immediately. If the movie does not pass th criterium, it will no longer be taken into consideration for the evaluation of the others. Lets have a look at the crew_gender data set, to be more precise, at the different departments:
+```{r}
+#store the different departments:
+dep <- crew_gender %>% 
+          select(DEPARTMENT) %>% 
+          distinct()
+dep
+```
+Out of those 29 departments, 2 seem to be particularly interesting: Stunts and Makeup department. This is because stunts are very often performed by men (even for female actors), while people working in the makeup department are often female. As we want to check for gender imbalance, we do not only look at imbalance when it comes to women, but also men.
+The crew of a movie can be considered as gender neutral, when there is 1 female stuntman and 1 male makeup artist. This is why our 5 criteria look as follows:
+
+1) Over 30% of the cast should be female
+2) Leading roles should be 40% female
+3) The supporting actors should be 30% female
+4)
+5) A movie is considered gender neutral if there is 1 female stuntman and 1 male makeup artist 
+
+Lets have a look at the feasibility of our fifth criterium:
+```{r}
+#first, modify the crew_gender data set to make it suitable for our analysis.
+#change the name from GENDER_GUESS to GENDER:
+crew_gender <- crew_gender %>% rename(GENDER = GENDER_GUESS)
+#delete the "-(2016)" that is added to every movie, so that we can perfom a join operator
+crew_gender <- crew_gender %>% mutate(MOVIE = str_sub(MOVIE,1,str_length(MOVIE)-7))
+
+#crew that does stunts
+stunt <- crew_gender %>% 
+            filter(DEPARTMENT == "Stunts_")
+
+#create a pie chart to visualize the count:
+pie <- ggplot(stunt, aes(x = "", fill = factor(GENDER))) + 
+  geom_bar(width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="GENDER", 
+       x=NULL, 
+       y=NULL, 
+       title="Pie Chart of class", 
+       caption="Source: mpg")
+pie + coord_polar(theta = "y", start=0)  
+  
+#crew that does make-up:
+makeup <- crew_gender %>% 
+            filter(DEPARTMENT == "Makeup Department_")
+
+#create a pie chart to visualize the count:
+pie2 <- ggplot(makeup, aes(x = "", fill = factor(GENDER))) + 
+  geom_bar(width = 1) +
+  theme(axis.line = element_blank(), 
+        plot.title = element_text(hjust=0.5)) + 
+  labs(fill="GENDER", 
+       x=NULL, 
+       y=NULL, 
+       title="Pie Chart of class", 
+       caption="Source: mpg")
+pie2 + coord_polar(theta = "y", start=0)  
+```
+There is a higher proportion of male makeup artists than female stuntman.
+
+criterium 5:
+```{r}
+#count females function:
+f_count_fem_crew <- function(df){
+  num_fem <- df %>% 
+                  filter(GENDER == "female") %>% 
+                  group_by(MOVIE) %>% 
+                  summarise(count_fem_cast = n())
+  return(num_fem)}
+
+#count males function:
+f_count_male_crew <- function(df){
+  num_male <- df %>% 
+                  filter(GENDER == "male") %>% 
+                  group_by(MOVIE) %>% 
+                  summarise(count_male_cast = n()) 
+  return(num_male)}
+
+#number of female stunman:
+num_fem_stunt <- f_count_fem_crew(stunt)
+  
+#number of male makeup artists:
+num_male_makeup <- f_count_male_crew(makeup)
+
+#initialize as list of all movies:
+my_bechdel5 <- cast_gender %>% 
+                  select(MOVIE) %>% 
+                  distinct()
+View(my_bechdel5)
+
+#add female stuntman count column:
+my_bechdel5 <- right_join(num_fem_stunt,my_bechdel5,by="MOVIE")
+#replace NAs by 0
+my_bechdel5[is.na(my_bechdel5[,2]),2]=0
+
+#add male makeup artists:
+my_bechdel5 <- right_join(num_male_makeup,my_bechdel5,by="MOVIE")
+#replace NAs by 0
+my_bechdel5[is.na(my_bechdel5[,2]),2]=0
+
+#create the crit5 column: if not 0 in both columns for 1 movie --> pass test
+my_bechdel5 <-  my_bechdel5 %>%
+                    mutate(
+                       crit5 = case_when(       
+                          count_male_cast != 0 & count_fem_cast != 0 ~ 1, #if both are different from 0, pass test(->1)
+                          count_male_cast == 0 | count_fem_cast == 0 ~ 0 #if one at least is equal to 0 , do not pass the test (->0)
+                          ) )
+table(my_bechdel5$crit5)
+
+#View(my_bechdel5)
+
+
+```
+
+Join tables together:
+```{r}
+#join to generate new df with 5 criteria:
+rick_test <- rick_test %>% 
+                left_join(my_bechdel5,by="MOVIE") %>% 
+                select(MOVIE,crit1,crit2,crit3,crit4,crit5)
+View(rick_test)
+```
+
+
+#Evaluation rule:
+If 2 out of the first 4 columns have missing data, then we cannot test the movie at all. The value in result will then be -10. Now we need to consider 2 cases:
+1)Data is available for every criterium: pass 3/4 tests to pass
+2)Missing data for 1 criterium: pass 2/3 tests
+Evaluation of the test:
+```{r}
+#add result column-> 1 : passed, 0 : not passed, -1 : not considered 
+rick_test <- rick_test %>% 
+                mutate(result = 0,
+                       sum = crit1+crit2+crit3+crit4)
+#View(rick_test)
+rick_test <- rick_test %>% 
+                mutate(result =case_when(
+                  sum >= 3 ~ 1,
+                  sum == -8 | sum == -7 ~ 1,
+                  sum < 3 & sum != -8 & sum != -7 ~ 0
+                  
+                ))
+
+#Finally, look for crit5, and overwrite result if it passed crit5
+#Remember: passing crit5 means that the test is passed automatically:
+rick_test <- rick_test %>% 
+                mutate(result = case_when(
+                  crit5 == 1 ~ 1,
+                  crit5 != 1 ~ result
+                  #if its not 1, we keep the same result.
+                ))
+table(rick_test$result)
+```
+
+
+#Additional data
+
+This data set contains the revenues
+```{r,message=FALSE, warning =FALSE}
+#revenue <- read_csv("data/Bechdel-master_revenue.csv")
+
+#delete the index column and prepare table for join operation:
+#revenue <- revenue %>% 
+#              select(-1) %>% 
+#              rename(MOVIE=Movie)
+#View(revenue)
+
+#join the data with a list of movies that we are going to test:
+#movie_list <- cast_gender %>% 
+#                  select(MOVIE) %>% 
+#                  distinct()
+#View(movie_list)
+#revenue <- inner_join(movie_list,revenue,by="MOVIE")
+#View(revenue)
+
+```
+Problems: many NAs, not very useful data. Very difficult to join the table based on the name of the movies...
+
+
+# Ressources
+
+http://bechdeltest.com/
+
+http://poly-graph.co/bechdel/
+
+https://pudding.cool/2017/03/film-dialogue/
+
+https://fivethirtyeight.com/features/the-dollar-and-cents-case-against-hollywoods-exclusion-of-women/
+
+https://fivethirtyeight.com/features/the-workplace-is-even-more-sexist-in-movies-than-in-reality/
+
+

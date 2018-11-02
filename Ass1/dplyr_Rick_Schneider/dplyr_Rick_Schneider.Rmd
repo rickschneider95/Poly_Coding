@@ -36,11 +36,11 @@ packageVersion("prenoms")      #installed, version 0.2.0
 
 ```{r,message=FALSE, warning=FALSE}
 #load packages:
-
 library(dplyr)
 library(prenoms)
 library(tidyverse)
 library(readxl)
+library(tidyr)
 library(knitr)
 
 ```
@@ -86,7 +86,6 @@ Load the "dpt_data_modif.csv" dataset from IGN (French public state administrati
 
 ```{r, message=FALSE}
 dpt_data_modif = read_csv("data/dpt_data_modif.csv")
-
 ```
 
 
@@ -102,9 +101,12 @@ We also fetched for you on [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/a
     + Save the modifications into "depp_modif.csv"
 
 ```{r,message=FALSE}
-depp_orig=read_csv2("data/DEPP-etab-1D2D.csv", locale = locale(encoding = "latin1"))
+#depp_orig=read_csv2("data/DEPP-etab-1D2D.csv", locale = locale(encoding = "latin1"))
+
 ###### WARNING MESSAGE #######
 
+depp_orig <- read.delim("data/Depp-etab-1D2D.csv", header = T,";",encoding = "latin1")
+#dim(depp_orig)
 
 #"code_postal_uai" is an int; we need to transform it to a char of 5 char an fill up with 0's
 depp_orig$code_postal_uai <- parse_character(depp_orig$code_postal_uai)
@@ -155,14 +157,14 @@ faits_2010=faits_2010[-(1:3), ,drop=FALSE]
 
 #Now we need to delete the column containing the excel computation "Tout_Departement"
 faits_2010 <- faits_2010 %>% 
-                select(-"Tout département")
+                select(-"Tout d�partement")
 
 #gather
 faits_2010 <- gather(faits_2010,"dpt","nombre",3:98)
 
 #delete column "Service Ã  comp?tence national"
 faits_2010 <- faits_2010 %>% 
-                select(-"Service à compétence national")
+                select(-"Service � comp�tence national")
 
 write.csv(faits_2010, file = "data/faits_2010_modif2.csv")
 
@@ -176,6 +178,8 @@ write.csv(faits_2010, file = "data/faits_2010_modif2.csv")
 faits_2010_modif=read_csv("data/faits_2010_modif2.csv", locale = locale(encoding = "latin1"))
 #remove first column:
 faits_2010_modif <- faits_2010_modif[,-1]
+
+View(faits_2010_modif)
 
 ```
 
@@ -207,11 +211,16 @@ dpt_data_modif_c <- dpt_data_modif
 #only dpt 01 to 95
 prenoms_c <- prenoms_c %>% 
                 filter(!dpt %in%  c("96","97","98","99","100","971","972","973","974"))
+#dpp_modif_c ha NA values for code postal. My assumption is that thoses are still under construction. As a result, we are not going to include them in our model!
+#list of 01 ... 99
+c <- (1:95)
+c <- sprintf("%02d",c)
 dpp_modif_c <- dpp_modif_c %>% 
-                filter(!dpt %in%  c("96","97","98","99","100","971","972","973","974"))
+                filter(dpt %in%  c)
 faits_2010_modif_c <- faits_2010_modif_c %>% 
                 filter(!dpt %in%  c("96","97","98","99","100","971","972","973","974"))
 
+sum(is.na(dpp_modif_c$code_postal_uai))
 
 
 
@@ -238,16 +247,8 @@ prenoms_c <- prenoms_c %>%
 #merge them together:
 prenoms_c <- rbind(prenoms_c,col_AB)
 
-
-col_ABCD <- prenoms_c %>% 
-            filter(dpt %in% c("2A","2B"))
-dim(col_ABCD) #47318, how can that make sense ?????????
-
-dim(prenoms_c) #3497458
-dim(prenoms)   #3712763
-
-
-#levels(as.factor(prenoms_c$dpt))
+#with the levels funtion we can see that we sucessfully removed 2A,2B and created dpt 20
+levels(as.factor(prenoms_c$dpt))
 
 
 #####  dpp_modif  #####
@@ -255,7 +256,9 @@ dpp_modif_c  %>%
     filter(dpt %in% c("2A","2B")) %>% 
     summarise(n())                      #result:0, no wos with 2A,2B
 
+levels(as.factor(dpp_modif_c$dpt))
 
+dim(dpp_modif_c)
 
 #####  faits_2010_modif  #####
 faits_2010_modif_c  %>% 
@@ -264,7 +267,7 @@ faits_2010_modif_c  %>%
 
 col_AB <- faits_2010_modif_c %>% 
             filter(dpt %in% c("2A","2B")) %>% 
-            group_by(Libell?) %>%
+            group_by(Libell�) %>%
             mutate(nombre=sum(nombre)) %>%                   
             ungroup() %>% 
             mutate(dpt="20") %>% 
@@ -276,13 +279,8 @@ faits_2010_modif_c <- faits_2010_modif_c %>%
 
 faits_2010_modif_c <- rbind(faits_2010_modif_c,col_AB)
 
-
 ####  dpt_data_modif_c  ####
-#For now, we are not going to change 2A and 2B into 20, as this file contains information about 2A and 2B that we cannot summarizre in one row without more information available. In a later step, if we need to do computations with the surface, we can simply add up the surface of 2A and 2B.
-
-
-
-
+#For now, we are not going to change 2A and 2B into 20, as this file contains information about 2A and 2B that we cannot summarize in one row without more information available. In a later step, if we need to do computations with the surface, we can simply add up the surface of 2A and 2B.
 
 
 ```
@@ -302,14 +300,14 @@ faits_2010_modif_c <- rbind(faits_2010_modif_c,col_AB)
 n_child_11_14 <- prenoms_c %>% 
                     filter(year %in% 1996:1999) %>% 
                     summarise(sum(n))
-#number of colleges in 2010
+#number of colleges in 2010:
 n_college_2010 <- dpp_modif_c %>% 
                     filter(nature_uai %in% c(352,350,340)) %>%    ###A ourvir???????
                     summarise(n())
-
+n_child_11_14
+n_college_2010
+#calculate average:
 average=n_child_11_14/n_college_2010
-#n_child_11_14
-#n_college_2010
 average
 
 ```
@@ -346,7 +344,7 @@ average_dpt$sum_child <- n_child_11_14_dp$sum_child/n_college_2010_dp$count_coll
 average_dpt <- average_dpt %>% 
                   arrange(desc(sum_child)) %>% 
                   rename(avg_child_per_dpt = sum_child)
-#average_dpt
+
 
 ```
 
@@ -361,7 +359,7 @@ n_facts_per_dpt <- faits_2010_modif_c %>%
 #delete he last row (service à compétence nationale), which is not a dpt per definition
 n_facts_per_dpt <- n_facts_per_dpt[-96,]
 
-
+View(n_facts_per_dpt)
 ```
 
 ### Number of children born, number of colleges and facts related by the police services per department in 2010 ?
@@ -386,14 +384,13 @@ table_dpt_2010 <- inner_join(table_dpt_2010,n_facts_per_dpt, by = "dpt")
 
 #arrang in descending order:
 table_dpt_2010 <- table_dpt_2010 %>% arrange(desc(sum_child),desc(count_coll),desc(sum_facts))
+View(table_dpt_2010)
 
 ```
 
 ### Number of children born, number of colleges and facts related by the police services per kmÂ² in 2010 by department?
 
 ```{r}
-
-
 
 #square_km per dpt:
 km2_dpt <- dpt_data_modif_c %>% 
@@ -404,7 +401,7 @@ km2_dpt <- dpt_data_modif_c %>%
 #sum of m's for 2A and 2B:
 sum_20 <- km2_dpt %>% 
             filter(CODE_DEPT %in% c("2A","2B")) %>% 
-            summarise(sum(surface_m))
+            summarise(sum(surface_m)) 
 km2_dpt$CODE_DEPT <- as.character(km2_dpt$CODE_DEPT)
 km2_dpt[km2_dpt$CODE_DEPT=="2A",1] <- "20"
 km2_dpt[km2_dpt$CODE_DEPT=="2A",2] <- sum_20
@@ -414,9 +411,14 @@ km2_dpt <- km2_dpt[!km2_dpt$CODE_DEPT == "2B",]
 km2_dpt <- km2_dpt %>% 
               arrange(CODE_DEPT) %>% 
               rename(dpt = CODE_DEPT)
+#save a copy for last question:
+km2_dpt_c <- km2_dpt
+
 
 #join the 2 tables together to have every information in 1 table
 km2_dpt <- inner_join(km2_dpt,table_dpt_2010,by="dpt")
+
+#find mistake ----> divide by 2
 
 #calculate the rates
 km2_dpt <- km2_dpt %>% 
@@ -429,10 +431,8 @@ km2_dpt <- km2_dpt %>%
             select(-surface_m) %>% 
             arrange(dpt)
 
-View(km2_dpt)
+#View(km2_dpt)
      
-
-
 
 ```
 
@@ -441,7 +441,7 @@ View(km2_dpt)
 ```{r}
 
 cor(km2_dpt$child_2010_per_km2,km2_dpt$facts_2010_per_km2)
-#strong correlation! cor=0.9909782. The higher the number of births in one year, the higher the facts related by the police per km2 in 2010. Linear relationship!
+#strong positive correlation! cor=0.991. The higher the number of births in one year, the higher the facts related by the police per km2 in 2010. Linear relationship!
 ```
 
 ### What is the mean regional density (in number/kmÂ²) of the 15 most given first names in France ?
@@ -462,23 +462,53 @@ View(dpt_data_modif_c)
 #Assumption: we only work with data in Metropolitan France, which means for "dpt" between `01` and `95` included
 
 
-#filter the 15 most given first names
+#filter the 15 most given first names:
 names_top15 <- prenoms_c %>% 
                   group_by(name) %>% 
                   summarise(popularity=sum(n)) %>% 
                   arrange(desc(popularity)) %>% 
-                  top_n(15) 
-wide_table <- prenoms_c %>% 
-                  filter(name %in% names_top15$name) %>% 
-                  View()
+                  top_n(15) %>% 
+                  select(name) %>% 
+                  as_vector()
+#wide table:
+wtable <- prenoms_c %>% 
+              select(-year,-sex,-prop) %>% 
+              group_by(dpt,name) %>% 
+              filter(name %in% names_top15) %>% 
+              mutate(n = sum(n)) %>% 
+              distinct() 
 
-names_top15$name
+#add the surface:
+wtable <- wtable %>% 
+            spread(key = name, value = n) %>%  
+            full_join(km2_dpt_c, id = "dpt")
+  
+#join
+reg <- dpt_data_modif_c %>% 
+          rename(dpt=CODE_DEPT) %>% 
+          select(NOM_REG,dpt) %>% 
+          filter(!dpt %in% c("2A","2B")) 
+
+wtable <- wtable %>%
+            full_join(reg, id = "dpt") 
+
+#change missing name:
+wtable[20,"NOM_REG"] <- "CORSE"
+
+#delete dpt column:
+wtable <- wtable[,-1]
+
+wtable1 <- wtable1 %>% 
+              group_by(NOM_REG) %>% 
+              mutate_all(sum) #%>% 
+ # distinct()
+wtable1 <- wtable1[17,1:16)]
+
+for(n in c(2:16))
+    wtable1[,n] = wtable1[,n]/wtable1[,17]
 
 
-
-
-
-
+View(wtable1)
 
 ```
 
