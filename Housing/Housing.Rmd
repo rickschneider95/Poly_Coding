@@ -40,6 +40,8 @@ idea:
 The goal of this thesis is to study and predict housing prices (response variable) based on predictor variables that provide data on the physical characteristics of properties, such as their size, age, location, etc.
 
 
+########## WARNING: bedroom bathroom rather continuuous data. Year categorical? ######
+
 #Exploratory data analysis:
 Lets have a short look at our data set:
 ```{r,message=FALSE}
@@ -340,12 +342,21 @@ ggplot(house, aes(x=Sqft, y=Price)) +
     geom_smooth(method=lm)+   # Add linear regression line 
     labs(title="Scatter plot of the price vs the size of the house (sqft)")                      
 ```
-This very simple model predicts the housing prices based on the size of the houses. The p-values for Sqft is very small, so the predictor is meaningful for our model. The R2 value is 0.6715, so our model can account for 67,15% of the variability. All in all, even though the model is very simple, it is not that bad. However, as we have a lot more data, we can generate a far better prediction. 
+This very simple model predicts the housing prices based on the size of the houses. The p-values for Sqft is very small, so the predictor is meaningful for our model. The R2 value is 0.6715, so our model can account for 67,15% of the variability of the data. All in all, even though the model is very simple, it is not that bad. However, as we have a lot more data, we can generate a far better prediction. 
+
 We are going to proceed as follows. First, we are going to generate a model including as many variables as possible. Next we are trying to improve the model by removing dependent variables, and by encoding the categorical variables. Finally, we are going to come up with new variables that are derived from the existing data set. The final model will then be analysed in detail from a statistical point of view.
 
 
 
+# Hypothesis study:
+In this section we are going to test a few hypothesis, which will help us to improve our model in the feature engineering part. During our data exploration, we have encountered a few relationships that seem to exist between the price and different variables. However, a statistical test is needed to quantify them and to generalize from our data set. Indeed, we only have data on 522 houses and their prices, and we were only able of visualizing this data. A statistical test allows us to have an iea if our assumption is true for the population as well (and not only for the randomly drwan sample).
 
+```{r}
+
+```
+
+# Dummy encoding for categorical data:
+Categrorical data can also be included in a linear regression model. However, it needs to be encoded as dummy variables. This is due to the fact that the regression model tresta all independent variables as numerical ones. Numerical variables encode data that can be directly compared. This is not the case for catergical data
 
 
 To consider:

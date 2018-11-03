@@ -42,6 +42,7 @@ library(tidyverse)
 library(readxl)
 library(tidyr)
 library(knitr)
+library(sf)
 
 ```
 
@@ -101,12 +102,8 @@ We also fetched for you on [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/a
     + Save the modifications into "depp_modif.csv"
 
 ```{r,message=FALSE}
-#depp_orig=read_csv2("data/DEPP-etab-1D2D.csv", locale = locale(encoding = "latin1"))
-
-###### WARNING MESSAGE #######
 
 depp_orig <- read.delim("data/Depp-etab-1D2D.csv", header = T,";",encoding = "latin1")
-#dim(depp_orig)
 
 #"code_postal_uai" is an int; we need to transform it to a char of 5 char an fill up with 0's
 depp_orig$code_postal_uai <- parse_character(depp_orig$code_postal_uai)
@@ -121,8 +118,8 @@ write.csv2(depp_orig, file = "data/depp_modif2.csv")
 
 2. Read the pre-processed "depp_modif.csv" file
 
-```{r}
-#depp_modif=read_csv("data/depp_modif.csv")
+```{r,message=FALSE,warning=FALSE}
+
 depp_modif <- read_csv2("data/depp_modif2.csv", locale = locale(encoding = "latin1"))
 #remove first column:
 depp_modif <- depp_modif[,-1]
@@ -173,13 +170,12 @@ write.csv(faits_2010, file = "data/faits_2010_modif2.csv")
 
 2. Read preprocessed file "faits_2010_modif.csv"
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 #Load file:
 faits_2010_modif=read_csv("data/faits_2010_modif2.csv", locale = locale(encoding = "latin1"))
 #remove first column:
 faits_2010_modif <- faits_2010_modif[,-1]
 
-View(faits_2010_modif)
 
 ```
 
@@ -359,7 +355,7 @@ n_facts_per_dpt <- faits_2010_modif_c %>%
 #delete he last row (service à compétence nationale), which is not a dpt per definition
 n_facts_per_dpt <- n_facts_per_dpt[-96,]
 
-View(n_facts_per_dpt)
+
 ```
 
 ### Number of children born, number of colleges and facts related by the police services per department in 2010 ?
@@ -384,7 +380,7 @@ table_dpt_2010 <- inner_join(table_dpt_2010,n_facts_per_dpt, by = "dpt")
 
 #arrang in descending order:
 table_dpt_2010 <- table_dpt_2010 %>% arrange(desc(sum_child),desc(count_coll),desc(sum_facts))
-View(table_dpt_2010)
+
 
 ```
 
@@ -406,6 +402,7 @@ km2_dpt$CODE_DEPT <- as.character(km2_dpt$CODE_DEPT)
 km2_dpt[km2_dpt$CODE_DEPT=="2A",1] <- "20"
 km2_dpt[km2_dpt$CODE_DEPT=="2A",2] <- sum_20
 km2_dpt <- km2_dpt[!km2_dpt$CODE_DEPT == "2B",]
+km2_dpt[km2_dpt$CODE_DEPT=="20",2]=km2_dpt[km2_dpt$CODE_DEPT=="20",2]*2
 
 #rename CODE_DEPT to dpt:
 km2_dpt <- km2_dpt %>% 
@@ -418,7 +415,6 @@ km2_dpt_c <- km2_dpt
 #join the 2 tables together to have every information in 1 table
 km2_dpt <- inner_join(km2_dpt,table_dpt_2010,by="dpt")
 
-#find mistake ----> divide by 2
 
 #calculate the rates
 km2_dpt <- km2_dpt %>% 
@@ -431,7 +427,6 @@ km2_dpt <- km2_dpt %>%
             select(-surface_m) %>% 
             arrange(dpt)
 
-#View(km2_dpt)
      
 
 ```
@@ -452,12 +447,6 @@ cor(km2_dpt$child_2010_per_km2,km2_dpt$facts_2010_per_km2)
 - Compute the region surface and the sum of names by region
 
 ```{r}
-
-View(prenoms_c)
-View(dpp_modif_c) 
-View(faits_2010_modif_c) 
-View(dpt_data_modif_c) 
-
 
 #Assumption: we only work with data in Metropolitan France, which means for "dpt" between `01` and `95` included
 
@@ -498,17 +487,15 @@ wtable[20,"NOM_REG"] <- "CORSE"
 #delete dpt column:
 wtable <- wtable[,-1]
 
-wtable1 <- wtable1 %>% 
-              group_by(NOM_REG) %>% 
-              mutate_all(sum) #%>% 
- # distinct()
-wtable1 <- wtable1[17,1:16)]
 
-for(n in c(2:16))
-    wtable1[,n] = wtable1[,n]/wtable1[,17]
+## second part: Compute the region surface and the sum of names by region ##
+
+wtable2 <- aggregate(wtable[,1:16],by=wtable[,17],sum)
+
+#What is the mean regional density (in number/kmÂ²) of the 15 most given first names in France?
+wtable2[,2:16] = wtable2[,2:16]/wtable2[,17]
 
 
-View(wtable1)
 
 ```
 
@@ -517,8 +504,88 @@ View(wtable1)
 - Use the "department" shapefile to cross information and map data
 
 ```{r}
+#read in:
+map <- st_read("data/departements/DEPARTEMENT.shp")
 
 
+map_join <- inner_join(wtable2,map,by="NOM_REG")
+
+
+#plot 15 different maps for the mean regional densities:
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[1])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Marie")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[2])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Jean")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[3])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Pierre")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[4])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Michel")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[5])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Andr�")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[6])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Jeanne")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[7])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Philippe")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[8])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Ren�")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[9])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Louis")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[10])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Alain")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[11])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Jacques")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[12])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Bernard")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[13])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Marcel")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[14])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Claude")
+
+ggplot(map_join)+
+            geom_sf(aes_string(fill=names_top15[15])) +
+            coord_sf(crs = st_crs(map)) + 
+            labs(title="Map of the mean regional density for Daniel")
 
 ```
 

@@ -38,11 +38,12 @@ library(stringr)
 The goal of this new bechdel test is to measure the gender imbalance in movies.
 
 The original Bechdel test tests for 3 criteria:
-1)Are there at least 2 women in the movie?
-2)Do they have a conversation together?
-3)Is that conversation about something else than a man?
 
-Fivethirtyeight has created a new Bechdel test.
+1) Are there at least 2 women in the movie?
+2) Do they have a conversation together?
+3) Is that conversation about something else than a man?
+
+Fivethirtyeight has created a new Bechdel test. For this test, I am going to work with their data:
 
 Import data from the new Benchdel test:
 ```{r,message=FALSE, warning =FALSE}
@@ -57,13 +58,13 @@ Lets start by having a look the 2 data sets that we have to create our benchdel 
 
 cast_gender:
 ```{r}
-#View(new_bechdel)
-
+#5 functions we should always run:
+#View(cast_gender)
 head(cast_gender)
 dim(cast_gender)
 names(cast_gender)
 summary(cast_gender)
-#View(cast_gender)
+
 
 #How many different movies are in the df?
 cast_gender %>% 
@@ -87,18 +88,20 @@ crew_gender %>%
   summarise(count_movies_crew=n())
 ```
 crew_gender is a 10029x7 data frame with the variables "MOVIE", "DEPARTMENT" (in which department did the crew member work?), "FULL_NAME", "FIRST_NAME", "IMDB" (link to the IMDb page of the person in question), "GENDER_PROB" (the probability of the name being female (->0) or male (->1)) and "GENDER_GUESS" (the guess of the gender based on the probability).
-crew_gender contains information about 19 different movies. All movie names have the supplement of "(2016)" in their name which can be removed.
+Crew_gender contains information about 19 different movies. All movie names have the supplement of "_(2016)" in their name which should be removed in a later step to allow for join operations.
 
 
 
 #My first Benchdel criteria:
-The goal of my personal benchdel test is to test for gender inequality. Therefore, I am going to introduce a few gender criteria that a movie should fulfill to pass my test. The first criteria that I would like t take into consideration are the following:
+The goal of my personal benchdel test is to test for gender inequality. Therefore, I am going to introduce a few gender criteria that a movie should fulfill to pass my test. It is really important that my test is reproducible and has actual results. In practice, this means that the test should be flexible, test for gender inqueality, but without being too selective about it.
+The first 2 criteria that I would like t take into consideration are the following:
+
 1) Over 30% of the cast should be female
 2) Leading roles should be 40% female
 
 Next the data set is analysed to see if those criteria are reasonable. In a next step, if necessary, we are going to adapt the criteria
 
-#Analysis of the first Benchdel criteria:
+#Analysis of the first 2 Benchdel criteria:
 Lets have a look at the feasibility of our first criterium, which is: "Over 30% of the cast should be female":
 ```{r}
 #create  count table:
@@ -113,8 +116,8 @@ pie <- ggplot(cast_gender, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart of class", 
-       caption="Source: mpg")
+       title="Pie Chart showing the actual number count of women, men and unknown gender of the cast", 
+       caption="Source: cast_gender")
   
 pie + coord_polar(theta = "y", start=0)
 
@@ -126,9 +129,9 @@ perc_female*100
 On average over all movies in our database, around 31.74% of the cast is female. As such, our requirement to have at least 30% females in a cast seems to be a feasible requirement without excluding all the movies, while still being a good indicator for gender equality.
 
 
-Lets have a look at the feasibility of our first criterium, which is: "Leading roles should be 40% female":
+Lets have a look at the feasibility of our second criterium, which is: "Leading roles should be 40% female":
 
-```{r}
+```{r, warning=FALSE}
 #filter out leading characters:
 leading_cast <- cast_gender %>%
                   filter(TYPE == "Leading")
@@ -146,8 +149,8 @@ pie <- ggplot(leading_cast, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart of class", 
-       caption="Source: mpg")
+       title="Pie Chart showing the actual number count of the gender for leading roles", 
+       caption="Source: cast_gender")
   
 pie + coord_polar(theta = "y", start=0)
 
@@ -156,12 +159,15 @@ leading_gender_count <- data.frame(leading_gender_count)
 perc_female <- leading_gender_count[leading_gender_count$Var1=="Female",2]/(leading_gender_count[leading_gender_count$Var1=="Female",2]+leading_gender_count[leading_gender_count$Var1=="Male",2])
 perc_female*100
 
-```
 
+
+```
+The same conclusion as for the first criterium holds. It is a reasonable criterium that is a good indicator for gender imbalance.
 
 
 
 # My first Benchdel test:
+Lets translate those insights into 2 actual criteria:
 
 Criterium 1:
 ```{r}
@@ -182,6 +188,7 @@ f_count_male <- function(df){
                   summarise(count_male_cast = n()) 
   return(num_male)}
 
+#how many women (resp how many men) are there in cast_gender?
 num_fem <- f_count_fem(cast_gender)
 num_male <- f_count_male(cast_gender)
 
@@ -190,33 +197,36 @@ my_bechdel <- inner_join(num_fem,num_male,by="MOVIE")
 my_bechdel <- my_bechdel %>% 
                 mutate(crit1_test = count_fem_cast/(count_fem_cast+count_male_cast),
                        crit1 = case_when(       
+                          #if larger than 0.3 -> pass = 1, else not pass = 0
                           crit1_test > 0.3  ~ 1, crit1_test <= 0.3 ~ 0))      
 table(my_bechdel$crit1) 
-#View(my_bechdel)
+
 
 ```
 We see that 31 out of the 50 movies pass this criterium
 
 
 criterium 2:
-
 ```{r}
 #use functions to count males and females having a leading role:
 num_fem <- f_count_fem(leading_cast)
 num_male <- f_count_male(leading_cast)
-#View(num_fem)
+
 
 #Reminder: leading_cast -> information about the leading actors for every movie
-#select a list of distinct movies where we have information about a leading actor
+#!select a list of distinct movies where we have information about a leading actor
 my_bechdel2 <- leading_cast %>% 
                   select(MOVIE) %>%  
                    distinct(MOVIE)
 
 #add the female count column:
 my_bechdel2 <- right_join(num_fem,my_bechdel2,by="MOVIE")
+#if NA, this means we a male actor, but no female --> replace by 0
 my_bechdel2[is.na(my_bechdel2[,2]),2]=0
+
 #add a male count column:
 my_bechdel2 <- right_join(num_male,my_bechdel2,by="MOVIE")
+#if NA, this means we a female actor, but no female --> replace by 0
 my_bechdel2[is.na(my_bechdel2[,2]),2]=0
 
 #calculate the ratio:
@@ -228,11 +238,13 @@ my_bechdel2 <-  my_bechdel2 %>%
                        crit2 = case_when(       
                           crit2_test > 0.4  ~ 1, crit2_test <= 0.4 ~ 0)) 
 table(my_bechdel2$crit2)
-#16 out of 31 movies pass this part of the test (+/- 50%)
+
             
-#View(my_bechdel2)
+
 
 ```
+16 out of 31 movies pass this part of the test (+/- 50%). We realize that we do not have data for every movie. As a result, we are going to add a 1, if the criterium is passed, a 0 if not passed, and a -10 if we don't have data on that movie.
+
 
 Putting the criteria together:
 ```{r}
@@ -241,7 +253,7 @@ rick_test <- rick_test %>%
                 left_join(my_bechdel2,by="MOVIE") %>% 
                 select(MOVIE,crit1,crit2)
 
-#if there is no data available, put a -1
+#if there is no data available, put a -10
 rick_test[is.na(rick_test$crit2),"crit2"]=-10
 
 #how many crit2 are equal to -1?
@@ -267,9 +279,11 @@ types_count <- cast_gender %>%
 #barplot of our resulting count table:
 ggplot(types_count, aes(x=TYPE, y=count_movies)) + 
   geom_bar(stat="identity", width=.5, fill="tomato3") + 
-  labs(title="Ordered Bar Chart", 
-       subtitle="Make Vs Avg. Mileage", 
-       caption="source: mpg") + 
+  labs(title="Bar Plot",
+       x="Type",
+       y="Number of movies",
+       subtitle="Count the number of movies having data for each role (x-axis) ", 
+       caption="cast_gender") + 
   theme(axis.text.x = element_text(angle=65, vjust=0.6))
 
 
@@ -297,8 +311,8 @@ pie <- ggplot(supp_gender, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart of class", 
-       caption="Source: mpg")
+       title="Pie Chart of the count of the gender for supporting actors", 
+       caption="cast_gender")
   
 pie + coord_polar(theta = "y", start=0)
 ```
@@ -415,9 +429,21 @@ top_pay3 <- cast_gender %>%
               filter(BILLING %in% c(1,2,3))
 
 #generate 3 count plots that count the number of women and men for the 3 datasets respectively:
-g5 <- ggplot(top_pay5,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
-g4 <- ggplot(top_pay4,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
-g3 <- ggplot(top_pay3,aes(GENDER) ) + geom_bar(aes(fill = GENDER))
+g5 <- ggplot(top_pay5,aes(GENDER) ) +
+        geom_bar(aes(fill = GENDER))+
+        labs(title="Barplot showing the gender count for the 5 best paid actors",
+             x="Gender",
+             y="Number of actors")
+g4 <- ggplot(top_pay4,aes(GENDER) ) + 
+        geom_bar(aes(fill = GENDER))+
+        labs(title="Barplot showing the gender count for the 4 best paid actors",
+             x="Gender",
+             y="Number of actors")
+g3 <- ggplot(top_pay3,aes(GENDER) ) + 
+        geom_bar(aes(fill = GENDER))+
+        labs(title="Barplot showing the gender count for the 3 best paid actors",
+             x="Gender",
+             y="Number of actors")
 
 #top 5 payed actors, plot the count of women, men and unknown:
 g5
@@ -504,8 +530,8 @@ pie <- ggplot(stunt, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart of class", 
-       caption="Source: mpg")
+       title="Pie Chart of the count of the gender for the stunt crew", 
+       caption="crew_gender")
 pie + coord_polar(theta = "y", start=0)  
   
 #crew that does make-up:
@@ -521,7 +547,7 @@ pie2 <- ggplot(makeup, aes(x = "", fill = factor(GENDER))) +
        x=NULL, 
        y=NULL, 
        title="Pie Chart of class", 
-       caption="Source: mpg")
+       caption="crew_gender")
 pie2 + coord_polar(theta = "y", start=0)  
 ```
 There is a higher proportion of male makeup artists than female stuntman.
