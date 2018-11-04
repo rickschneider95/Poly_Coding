@@ -424,7 +424,10 @@ house_c <- house_c %>% select(-YearBuild)
 ```
 
 
+CREATE EVALUATION FUNCTION ! -> in his function, create linear regression model and output p-value, R2. DID THE NEW FEATURE IMPROVE THE RESULT? KEEP IT; ELSE MISTAKE.
+This is only for simple lin regression to see if the change is useful.
 
+select variables: forward selection or backward selection: https://www.kaggle.com/mashimo/features-selection-for-multiple-linear-regression 
 
 
 
