@@ -1,7 +1,7 @@
 ---
 title: "dplyr_Rick_Schneider"
 author: "Rick SCHNEIDER"
-date: "1 octobre 2018"
+date: "3 november 2018"
 output: html_document
 ---
 
@@ -446,7 +446,7 @@ cor(km2_dpt$child_2010_per_km2,km2_dpt$facts_2010_per_km2)
 - merge with the surface department infos
 - Compute the region surface and the sum of names by region
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 
 #Assumption: we only work with data in Metropolitan France, which means for "dpt" between `01` and `95` included
 
@@ -510,7 +510,7 @@ map <- st_read("data/departements/DEPARTEMENT.shp")
 
 map_join <- inner_join(wtable2,map,by="NOM_REG")
 
-
+names_top15
 #plot 15 different maps for the mean regional densities:
 ggplot(map_join)+
             geom_sf(aes_string(fill=names_top15[1])) +
@@ -518,12 +518,13 @@ ggplot(map_join)+
             labs(title="Map of the mean regional density for Marie")
 
 ggplot(map_join)+
-            geom_sf(aes_string(fill=names_top15[2])) +
+            geom_sf(aes(fill=Jean)) +
             coord_sf(crs = st_crs(map)) + 
             labs(title="Map of the mean regional density for Jean")
 
+
 ggplot(map_join)+
-            geom_sf(aes_string(fill=names_top15[3])) +
+            geom_sf(aes_string(fill="Pierre")) +
             coord_sf(crs = st_crs(map)) + 
             labs(title="Map of the mean regional density for Pierre")
 

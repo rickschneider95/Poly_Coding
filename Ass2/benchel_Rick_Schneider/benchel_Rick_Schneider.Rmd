@@ -116,7 +116,7 @@ pie <- ggplot(cast_gender, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart showing the actual number count of women, men and unknown gender of the cast", 
+       title="Pie Chart of the number count of women, men and unknown gender of the cast", 
        caption="Source: cast_gender")
   
 pie + coord_polar(theta = "y", start=0)
@@ -239,6 +239,7 @@ my_bechdel2 <-  my_bechdel2 %>%
                           crit2_test > 0.4  ~ 1, crit2_test <= 0.4 ~ 0)) 
 table(my_bechdel2$crit2)
 
+View(my_bechdel2)
             
 
 
@@ -264,7 +265,39 @@ rick_test %>%
 ```
 #First evaluation:
 
-After implementing the 2 first criteria, we can see that there is a problem for the availability of the data. This means that if we filter for different categories, there might not be data on every movie. For crit2 e.g., there are 19 movies that cannot be tested because of missing data. This can be seen in the following plot: PLOTPLOTPLOT.
+```{r}
+
+#evaluation count table:
+c_bench_1 <- data.frame(table(rick_test$crit1))
+
+#barplot of our resulting count table:
+ggplot(c_bench_1, aes(y=Freq,x=Var1)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Bar Plot",
+       x="Test result",
+       y="Number of movies",
+       subtitle="Evaluation for the 1st criterium", 
+       caption="rick_test") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+
+
+#evaluation count table:
+c_bench_2 <- data.frame(table(rick_test$crit2))
+
+#barplot of our resulting count table:
+ggplot(c_bench_2, aes(y=Freq,x=Var1)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Bar Plot",
+       x="Test result",
+       y="Number of movies",
+       subtitle="Evaluation for the 2nd criterium", 
+       caption="rick_test") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+
+```
+
+
+After implementing the 2 first criteria, we can see (from the bar plots) that there is a problem for the availability of the data for the second criterium while the first perfoms well with 31 passed tests. This means that if we filter for different categories, there might not be data on every movie. For crit2 e.g., there are 19 movies that cannot be tested because of missing data. This can be seen in the following plot: PLOTPLOTPLOT.
 
 We are going to look at the different roles of the of the cast and we are going to check how much data is actually available for the different categories.
 
@@ -353,11 +386,22 @@ my_bechdel3 <-  my_bechdel3 %>%
                           crit3_test > 0.4  ~ 1, 
                           crit3_test <= 0.4 ~ 0,
                           is.na(crit3_test) == TRUE ~ -10)) 
-table(my_bechdel3$crit3)
-```
-13 movies pass the test, 36 do not pass it and for 1 movie, we do not have data on the gender of the of the supporting cast.
 
-###### MAYBE CHANGE CRITERIUM TO: 30% if enough leading people, otherwise .... #######
+
+#evaluation count table:
+c_bench_3 <- data.frame(table(my_bechdel3$crit3))
+
+#barplot of our resulting count table:
+ggplot(c_bench_3, aes(y=Freq,x=Var1)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Bar Plot",
+       x="Test result",
+       y="Number of movies",
+       subtitle="Evaluation of the 3rd criterium", 
+       caption="rick_test") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+```
+13 movies pass the test, 36 do not pass it and for 1 movie. We have data on every movie, as it was predicted by the bar plot we did above.
 
 Putting the criteria together:
 ```{r}
@@ -365,7 +409,6 @@ Putting the criteria together:
 rick_test <- rick_test %>% 
                 left_join(my_bechdel3,by="MOVIE") %>% 
                 select(MOVIE,crit1,crit2,crit3)
-
 
 ```
 
@@ -415,10 +458,22 @@ my_bechdel4 <-  my_bechdel4 %>%
                           count_fem_cast == 0  ~ 0,
                           )) 
 
-table(my_bechdel4$crit4)
+#evaluation count table:
+c_bench_4 <- data.frame(table(my_bechdel4$crit4))
+
+#barplot of our resulting count table:
+ggplot(c_bench_4, aes(y=Freq,x=Var1)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="Bar Plot",
+       x="Test result",
+       y="Number of movies",
+       subtitle="Evaluation of the 4rd criterium", 
+       caption="rick_test") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
 
 ```
-This test seems to be unrestrictive. To find a good alternative, we are going to plot the relation of women to men for the top 5, top 4 and top 3 highest paid actors for every movie
+This test seems to be too unrestrictive. Almost every movie passes the criterium, and this is not in line with my first objective for the test.
+To find a good alternative, we are going to plot the relation of women to men for the top 5, top 4 and top 3 highest paid actors for every movie
 
 ```{r}
 #store top 5 , top 4 and top 3 payed actors respectively:
@@ -507,7 +562,7 @@ The crew of a movie can be considered as gender neutral, when there is 1 female 
 1) Over 30% of the cast should be female
 2) Leading roles should be 40% female
 3) The supporting actors should be 30% female
-4)
+4) At least 2 of the 3 highest paid actors should be female
 5) A movie is considered gender neutral if there is 1 female stuntman and 1 male makeup artist 
 
 Lets have a look at the feasibility of our fifth criterium:
@@ -546,7 +601,7 @@ pie2 <- ggplot(makeup, aes(x = "", fill = factor(GENDER))) +
   labs(fill="GENDER", 
        x=NULL, 
        y=NULL, 
-       title="Pie Chart of class", 
+       title="Pie Chart of the count of the gender for the makeup artists", 
        caption="crew_gender")
 pie2 + coord_polar(theta = "y", start=0)  
 ```
@@ -647,40 +702,21 @@ table(rick_test$result)
 ```
 
 
-#Additional data
+# Strength and weaknesses:
+Durin this entire file, we contsantly looked at the strengths and weaknesses of the different criteria. This can be summarized as follows:
 
-This data set contains the revenues
-```{r,message=FALSE, warning =FALSE}
-#revenue <- read_csv("data/Bechdel-master_revenue.csv")
+One downside of the test is that it cannot include too many criteria that have missing data. Even though a rule for missing data has been established, a movie could still fail the test due to missing data.
 
-#delete the index column and prepare table for join operation:
-#revenue <- revenue %>% 
-#              select(-1) %>% 
-#              rename(MOVIE=Movie)
-#View(revenue)
+Furthermore, the rule is certainly not perfect. It allows for some tolerance in the evaluation, meaning that there is a different evaluation metrice for movies with missing data and without missing data. However, this new evauation metric also changes the proportion of crtieria a movie needs to pass. If there is no missing data, a test need to pass 3/4 (i.e. 75%) of the criteria (if the 5th is not passed). If there is missing data, a movie needs to pass 2/3 (i.e. 66%) of the criteria. This means that a movie with missing data can pass the test a little bit easier than a movie without missing data. This effect could be decreased if there were more criteria available. 
 
-#join the data with a list of movies that we are going to test:
-#movie_list <- cast_gender %>% 
-#                  select(MOVIE) %>% 
-#                  distinct()
-#View(movie_list)
-#revenue <- inner_join(movie_list,revenue,by="MOVIE")
-#View(revenue)
-
-```
-Problems: many NAs, not very useful data. Very difficult to join the table based on the name of the movies...
+Another weakness of the test is that it mainly looks for ratios, and not a fixed amount of people fulfilling a certain criterium. This might in general be a good approach, as it is the best way to compare different quantities. However, for small movies, this can be a disadvantage, as they might have only 1 or 2 people working in a certain position. 
 
 
-# Ressources
+The main strength of the test is that it creates a rule for missing data. Even though, as already mentioned, it cannot deal with too many missing values,it still takes this problem into account and provides a solution to it. As a result, the test is expandable, and even if data is missing for a few movies, the test is still feasible and they might still pass it. However, if there is too much missing data, the test is not passed.
 
-http://bechdeltest.com/
+Another strength of the test is that it combines many features that are important for gender equality in one test. As such, it includes five criteria that look at gender ratios in the cast, leading and supporting positions as well as the payment. 
 
-http://poly-graph.co/bechdel/
+What is more, the test is flexible. This means that there are different ways of passing it. For example, if you have female stunt people and male makeup artists, the movie passes the test immediatly, as this criterium is very difficult to pass. Even if the movie does not pass this criterium, it can still pass the test by passing a large proportion of the other criteria.
 
-https://pudding.cool/2017/03/film-dialogue/
-
-https://fivethirtyeight.com/features/the-dollar-and-cents-case-against-hollywoods-exclusion-of-women/
-
-https://fivethirtyeight.com/features/the-workplace-is-even-more-sexist-in-movies-than-in-reality/
-
+Finally, the test seeks to check for gender equality. This means that it does not only check for female imbalance, but also for male imbalance. It clearly focues on female imbalance, as the movie industry tends to have many men working there. However, domains that are in general dominated by women, such as the domain of makeup artists, is checked for male presence as well.
 

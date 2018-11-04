@@ -68,9 +68,9 @@ house %>% select(Quality) %>% distinct()
 #which values does "AdjHighway" take?:
 house %>% select(AdjHighway) %>% distinct()
 
-View(house)
+
 ```
-We store our data set "realestat.csv" into a variable called house. The first insight is that the column "ID" is not needed, as it only stores the index of the houses. As a result, we can delete this column. The data set now contains 11 columns and 522 rows. The variables are as follows: "Price" (quantitative; the price of the property in question), "Sqft" (quantitative; size), "Bedroom" (quantitative; number of bedrooms), "Bathroom" (quantitative; number of bathrooms), "Airconditioning" (qualitative; yes: 1, no: 0), "Garage" (quantitative; number of garages (or parking spots)), "Pool" (qualitative; yes: 1, no: 0), "YearBuild" (qualitative; year in which the house was built), "Quality" (qualitative; the build-quality of the house on a scale of 1 to 3), "Lot" (quantitative, the surface of the land), and finally "AdjHighway"(qualitative; 1: next to a highway, 0: not close or next to a highway).
+We store our data set "realestat.csv" into a variable called house. The first insight is that the column "ID" is not needed, as it only stores the index of the houses. As a result, we can delete this column. The data set now contains 11 columns and 522 rows. The variables are as follows: "Price" (quantitative; the price of the property in question), "Sqft" (quantitative; size), "Bedroom" (quantitative; number of bedrooms), "Bathroom" (quantitative; number of bathrooms), "Airconditioning" (qualitative; yes: 1, no: 0), "Garage" (quantitative; number of garages (or parking spots)), "Pool" (qualitative; yes: 1, no: 0), "YearBuild" (qualitative, as it makes no sense to multiply or divide 2 different years; year in which the house was built), "Quality" (qualitative; the build-quality of the house on a scale of 1 to 3), "Lot" (quantitative, the surface of the land), and finally "AdjHighway"(qualitative; 1: next to a highway, 0: not close or next to a highway).
 
 #EDA
 First, we are going to study the variables themselves and their impact on the price of the house. Next, we are going to generate to simple regression models based on the results of the analysis. Finally, we will look at the relations that might exist amongst te variables in order to remove a few of them from oure model (to improve it by reducing the effects of multicollinearity) and to create new variables that might improve our model.
@@ -86,6 +86,7 @@ ggplot(data=house, aes(Price)) +
                  bins=35) +
   labs(title="Histogram for Price")
 
+
 #is it normal?
 qqnorm(Price)
 
@@ -99,7 +100,7 @@ sum(is.na(Price))
 sum(Price[Price < 0])
   
 ```
-Looking at the histogram, the price follows approximately a normal distribution. However, it is right skewed, meaning that it has a long right tail. However, the qq-plot shows that the normal assumptions is very weak. The median price of a house is 229900$, while the mean price is 277894$. This is due to the fact that there are a few outliers, reaching a maximum price of 920000$. The boxplot of the price-variable verifies our assumption with the outliers. The data is indeed right skewed with a lot of ouliers. 
+Looking at the histogram, the price follows approximately a normal distribution. However, it is right skewed, meaning that it has a long right tail. However, the qq-plot shows that the normal assumptions is very weak. The median price of a house is 229900$, while the mean price is 277894$. This is due to the fact that there are a few outliers, reaching a maximum price of 920000$, and to its right-slewness. The boxplot of the price-variable verifies our assumption with the outliers. The data is indeed right skewed with a lot of ouliers. 
 Furthermore, there are no missing values and no negative values, which shows that the data seem to be complete and not faulty.
 
 "Sqft":
@@ -148,9 +149,17 @@ ggplot(data=mean_cat, aes(x=Bedroom,y=m)) +
   geom_point()+
   labs(title="Plot of the mean values of the price against the number of bedrooms")
 
+#correlation
+cor(Price,Bedroom)
+#scatter plot:
+ggplot(data = house, aes(x=Bedroom,y=Price))+
+  geom_point()+
+  labs(title="Scatter plot of the price as a function of the size (Sqft)")
+#correlation:
+
 ```
 Most of the houses have 3 bedrooms (202 bedrooms), followed by 4 bedrooms (179), then 2 (64). There are no missing values and the data lies within {0,...,6}.
-There seems to be an interesting relationship between the number of bedrooms and the price of the house. We plotted the mean values for the price having a certain amount of bedrooms. We can observe a linear trend. More bedrooms seem to increase the price of the property.
+There seems to be an interesting relationship between the number of bedrooms and the price of the house. We plotted the mean values for the price having a certain amount of bedrooms. We can observe a linear trend. More bedrooms seem to increase the price of the property. However, looking at a scatter plot between the two variables, we can see that the variance for the price for each "number of bedroom" is quite high (as expected).
 
 
 "Bathroom":
@@ -334,26 +343,124 @@ A large maority of the properties in our data set is not next to a highway. Only
 #First model:
 A first and very simple approach to predict the housing prices is to make use of the strong linear correlation of the size and the price of a property. As such, we can generate a simple linear regression model and plot its result.
 ```{r}
+#simple linear model
 simple_reg <- lm(Price ~ Sqft)
 summary(simple_reg)
 
 ggplot(house, aes(x=Sqft, y=Price)) +
     geom_point() +   
     geom_smooth(method=lm)+   # Add linear regression line 
-    labs(title="Scatter plot of the price vs the size of the house (sqft)")                      
+    labs(title="Scatter plot of the price vs the size of the house (sqft)")  
+
+#residuals plot
+plot(Sqft, residuals(simple_reg), xlab = "Sqft", ylab = "Residuals",main="Residuals against predictor Sqft")
+abline(0,0, lty = 2)
+
 ```
-This very simple model predicts the housing prices based on the size of the houses. The p-values for Sqft is very small, so the predictor is meaningful for our model. The R2 value is 0.6715, so our model can account for 67,15% of the variability of the data. All in all, even though the model is very simple, it is not that bad. However, as we have a lot more data, we can generate a far better prediction. 
+This very simple model predicts the housing prices based on the size of the houses. The p-values for Sqft is very small, so the predictor is meaningful for our model. The R2 value is 0.6715, so our model can account for 67,15% of the variability of the data. All in all, even though the model is very simple, it is not that bad. However, as we have a lot more data, we can generate a far better prediction. Looking at the residuals plot, we can observe that the variance around 0 of the residuals increases as the size of the houses increases. This is not a good behaviour, and it is a sign of non-constant variance. These plots exhibit “heteroscedasticity”, meaning that the residuals get larger as the prediction moves from small to large (or from large to small). Going back to the initial scatter plot of "Price vs Sqft", this effect can indeed be observed. This might be resolved by doing a log-transformation of the variables, as in general, regression models work better with more symmetrical, bell-shaped curves. We are going to adress this issue in the section of feature engineering.
+
 
 We are going to proceed as follows. First, we are going to generate a model including as many variables as possible. Next we are trying to improve the model by removing dependent variables, and by encoding the categorical variables. Finally, we are going to come up with new variables that are derived from the existing data set. The final model will then be analysed in detail from a statistical point of view.
+
+
+#Feature engineering:
+In this section, we are going to change existing variables (e.g. transform categorical data, or try to improve the symmetry of the data), create new variables (such as interactions between variables), remove dependent variables, and we are directly going to test the implications on our linear model.
+
+```{r}
+#store a copy of housing:
+house_c <- house
+detach(house)
+attach(house_c)
+
+## try to improve symmetry for price:
+house_c <- house_c %>% mutate(Price_log = log(Price),Sqft_log = log(Sqft))
+
+glimpse(house_c)
+#histogram:
+ggplot(data=house_c, aes(Price_log)) +
+  geom_histogram(col="white",
+                 bins=35) +
+  labs(title="Histogram for logarithmic Price")
+
+#is it normal?
+qqnorm(Price_log)
+
+#boxplot:
+ggplot(data=house_c, aes(x="", y=Price_log)) +
+  geom_boxplot()+
+  labs(title="Boxplot for Price")
+
+#delete initial columns:
+house_c <- house_c %>% select(-c(Price,Sqft))
+
+
+```
+We transform the price variable using a log-transformation, as there are no 0 and no negative entries. Looking at the histogram, the boxplot and the qqplot, we can see that the data is a lot more symmetric after the transoformation and that it follows a normal distribution in a better way than before. The model should benefit from this change. We did the same for the variable "Sqft" and saw similar improvments regarding symmetry. To prove this, we are going to re-run our inital simple linear regression model and compare the results (especially the residuals plot).
+
+```{r}
+#simple linear model
+simple_reg <- lm(Price_log ~ Sqft_log)
+summary(simple_reg)
+
+ggplot(house_c, aes(x=Sqft_log, y=Price_log)) +
+    geom_point() +   
+    geom_smooth(method=lm)+   # Add linear regression line 
+    labs(title="Scatter plot of the price vs the size of the house (sqft)")  
+
+#residuals plot
+plot(Sqft_log, residuals(simple_reg), xlab = "Sqft_log", ylab = "Residuals",main="Residuals against predictor Sqft")
+abline(0,0, lty = 2)
+
+```
+The model has improved a lot! the R2 value has increased, the p-value is still very low, and the scatter plot of the prediction looks very accurate. More importantly, the residuals plot shows an acceptable behaviour. The plot shows more or less randomly distributed points, even though we still have outliers and a small cluster around 7.5.
+
+Next, we are going to look at the year variable. Here, it is interesting to create a new variable, which is year_x = year - (min(year)+1). This will create a variable that is continuous and that will start at 1. The advantage is that we can perfom comutations on the new variables (such as log transfromation), and still have the same meaning.
+```{r}
+#create year_x = year - (min(year)+1)
+house_c <- house_c %>% mutate(year_x = YearBuild-(min(YearBuild)+1))
+#remove old column:
+house_c <- house_c %>% select(-YearBuild)
+
+```
+
+
+
+
+
+
 
 
 
 # Hypothesis study:
 In this section we are going to test a few hypothesis, which will help us to improve our model in the feature engineering part. During our data exploration, we have encountered a few relationships that seem to exist between the price and different variables. However, a statistical test is needed to quantify them and to generalize from our data set. Indeed, we only have data on 522 houses and their prices, and we were only able of visualizing this data. A statistical test allows us to have an iea if our assumption is true for the population as well (and not only for the randomly drwan sample).
 
+Our sample of data has shown us that, on average, houses with AC are on average around 100.000$ more expensive than houses without AC. We want to know if this is a statistically significant effect in the population from which the sample was taken. To do this, we carry out a hypothesis test to determine whether or not b (the coefficient for females) is different from zero in the population. If the coefficient could be zero, then there is no statistically significant difference between males and females.
 ```{r}
+reg_AC <- lm(Price ~ Airconditioning) 
+summary(reg_AC)
+
+t.test(Price[Airconditioning==1],Price[Airconditioning==0])
 
 ```
+The p-value is 1.8e-11 (<0.05 = alpha), which means that that we reject the null hypothesis, which is that b associated to "Airconitioning" is 0. As a result, there is indeed a statistical difference in price between houses with AC and without AC.
+Alternatively, one could directly apply the t-test to 2 different samples, one containing prices of houses with AC, and one without. The test results in the same conclusion, which is that, statistically speaking, we can reject the null hypothesis and accept the alternative hypothesis.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Dummy encoding for categorical data:
 Categrorical data can also be included in a linear regression model. However, it needs to be encoded as dummy variables. This is due to the fact that the regression model tresta all independent variables as numerical ones. Numerical variables encode data that can be directly compared. This is not the case for catergical data
